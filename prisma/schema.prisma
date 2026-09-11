@@ -1,0 +1,81 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Session {
+  id               String       @id @default(uuid())
+  sessionToken     String       @unique
+  status           String       @default("ACTIVE") // ACTIVE, COMPLETED, EXPIRED
+  uploadedPhotoUrl String?
+  createdAt        DateTime     @default(now())
+  expiresAt        DateTime
+  generations      Generation[]
+}
+
+model Experience {
+  id          String       @id @default(uuid())
+  slug        String       @unique
+  name        String
+  description String
+  icon        String?
+  enabled     Boolean      @default(true)
+  order       Int          @default(0)
+  styles      Style[]
+  generations Generation[]
+}
+
+model Style {
+  id              String       @id @default(uuid())
+  experienceId    String
+  experience      Experience   @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  name            String
+  category        String       @default("General")
+  thumbnailUrl    String
+  garmentImageUrl String?
+  prompt          String
+  negativePrompt  String?
+  enabled         Boolean      @default(true)
+  order           Int          @default(0)
+  generations     Generation[]
+}
+
+model Generation {
+  id                 String      @id @default(uuid())
+  publicToken        String      @unique
+  sessionId          String?
+  session            Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  experienceId       String?
+  experience         Experience? @relation(fields: [experienceId], references: [id], onDelete: SetNull)
+  styleId            String?
+  style              Style?      @relation(fields: [styleId], references: [id], onDelete: SetNull)
+  originalImagePath  String
+  garmentImagePath   String?
+  generatedImagePath String?
+  provider           String      @default("custom")
+  providerJobId      String?
+  status             String      @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
+  progress           Int         @default(0)
+  errorMessage       String?
+  createdAt          DateTime    @default(now())
+  completedAt        DateTime?
+  expiresAt          DateTime?
+}
+
+model Settings {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}

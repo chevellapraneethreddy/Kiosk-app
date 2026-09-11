@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(22, 27, 51, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(30, 35, 60, 0.6) 0%, rgba(15, 18, 35, 0.8) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFF0B2 0%, #D4AF37 50%, #AA820A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-button {
+  background: linear-gradient(135deg, #FCE079 0%, #D4AF37 50%, #AA820A 100%);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.gold-button:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Hide scrollbars for clean kiosk presentation */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

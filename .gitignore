@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment variables & Secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Build outputs
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# SQLite Database
+*.db
+*.db-journal
+*.sqlite
+dev.db
+
+# Logs
+*.log
+logs/
+
+# Uploaded & Generated User Media
+uploads/*
+!uploads/.gitkeep
+generated/*
+!generated/.gitkeep
+
+# System & Temporary files
+.DS_Store
+Thumbs.db
+*.tmp
+cloudflared.exe
