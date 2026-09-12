@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { config } from './config';
 import { logger } from './utils/logger';
 import apiRouter from './routes/api';
@@ -26,6 +27,25 @@ app.use('/assets', express.static(assetsDir));
 
 // Register API Routes
 app.use('/api', apiRouter);
+
+// Serve frontend SPA in production if built
+const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
+app.get('*', (req, res, next) => {
+  if (
+    req.path.startsWith('/api') ||
+    req.path.startsWith('/uploads') ||
+    req.path.startsWith('/generated') ||
+    req.path.startsWith('/assets')
+  ) {
+    return next();
+  }
+  const indexHtml = path.join(frontendDist, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    return res.sendFile(indexHtml);
+  }
+  next();
+});
 
 // Global Error Handler
 app.use(errorHandler);

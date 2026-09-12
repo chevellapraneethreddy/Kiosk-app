@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ai-fashion-kiosk
+    runtime: node
+    plan: free
+    buildCommand: npm run build && npm run db:seed
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_PROVIDER
+        value: decart
+      - key: DECART_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@standee.com
+      - key: ADMIN_PASSWORD_HASH
+        value: $2b$10$EpRnTzVlqHNP0.fKbXWkDeZtB2t02Tj/l8n0j4mS5v8H/r1P2Q4i2
