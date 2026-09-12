@@ -33,29 +33,44 @@ export const MobileResultPage: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
+  const [downloading, setDownloading] = useState<boolean>(false);
+
+  const handleDownload = async () => {
     if (!result?.generation?.generatedImagePath) return;
-    const link = document.createElement('a');
-    link.href = result.generation.generatedImagePath;
-    link.download = `AI_Virtual_TryOn_${Date.now()}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      setDownloading(true);
+      const res = await fetch(result.generation.generatedImagePath, { mode: 'cors' });
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `AI_Virtual_TryOn_${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+    } catch (e) {
+      console.warn('Blob download fallback to direct link:', e);
+      window.open(result.generation.generatedImagePath, '_blank');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleShare = async () => {
+    const shareUrl = window.location.href;
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'My AI Virtual Try-On Look',
           text: 'Check out my AI Virtual Try-On photo!',
-          url: window.location.href,
+          url: shareUrl,
         });
       } catch (err) {
         console.log('Share canceled');
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(shareUrl);
       alert('Link copied to clipboard!');
     }
   };
@@ -137,10 +152,11 @@ export const MobileResultPage: React.FC = () => {
             <div className="w-full space-y-3 pt-1">
               <button
                 onClick={handleDownload}
-                className="gold-button text-black font-extrabold uppercase py-3.5 rounded-2xl w-full flex items-center justify-center text-base shadow-xl active:scale-95"
+                disabled={downloading}
+                className="gold-button text-black font-extrabold uppercase py-3.5 rounded-2xl w-full flex items-center justify-center text-base shadow-xl active:scale-95 disabled:opacity-50"
               >
                 <Download className="w-5 h-5 mr-2" />
-                <span>DOWNLOAD PHOTO</span>
+                <span>{downloading ? 'SAVING PHOTO...' : 'DOWNLOAD PHOTO'}</span>
               </button>
 
               <button

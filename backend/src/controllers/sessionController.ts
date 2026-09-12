@@ -24,21 +24,27 @@ export async function createSession(req: Request, res: Response) {
     const mobileUploadUrl = `${frontendBaseUrl}/mobile-upload/${sessionToken}`;
     const qrDataUrl = await generateQrDataUrl(mobileUploadUrl);
 
-    // Also generate direct local LAN URL (failsafe for same Wi-Fi)
-    const lanBaseUrl = getLocalFrontendUrl();
-    const lanUploadUrl = `${lanBaseUrl}/mobile-upload/${sessionToken}`;
-    const lanQrDataUrl = await generateQrDataUrl(lanUploadUrl);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // In local development only, also generate direct local LAN URL (failsafe for same Wi-Fi)
+    let lanUploadUrl: string | undefined;
+    let lanQrDataUrl: string | undefined;
+
+    if (!isProduction) {
+      const lanBaseUrl = getLocalFrontendUrl();
+      lanUploadUrl = `${lanBaseUrl}/mobile-upload/${sessionToken}`;
+      lanQrDataUrl = await generateQrDataUrl(lanUploadUrl);
+      logger.info(`[QR DEBUG] Wi-Fi LAN URL: ${lanUploadUrl}`);
+    }
 
     logger.info(`[QR DEBUG] Upload Session Created: ${session.id}`);
     logger.info(`[QR DEBUG] Primary URL: ${mobileUploadUrl}`);
-    logger.info(`[QR DEBUG] Wi-Fi LAN URL: ${lanUploadUrl}`);
 
     res.json({
       session,
       mobileUploadUrl,
       qrDataUrl,
-      lanUploadUrl,
-      lanQrDataUrl,
+      ...(lanUploadUrl && { lanUploadUrl, lanQrDataUrl }),
       isTunnel: frontendBaseUrl.startsWith('https://'),
     });
   } catch (error: any) {

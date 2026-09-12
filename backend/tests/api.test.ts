@@ -1,4 +1,10 @@
 import request from 'supertest';
+
+jest.mock('@decartai/sdk', () => ({
+  createDecartClient: jest.fn(() => ({})),
+  models: {},
+}));
+
 import app from '../src/index';
 import { prisma } from '../src/db';
 

@@ -25,13 +25,28 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({
   const activeQr = networkMode === 'lan' && lanQrDataUrl ? lanQrDataUrl : qrDataUrl;
   const activeUrl = networkMode === 'lan' && lanResultUrl ? lanResultUrl : publicResultUrl;
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = generatedImageUrl;
-    link.download = `AI_Fashion_Mirror_${Date.now()}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!generatedImageUrl) return;
+    try {
+      setDownloading(true);
+      const res = await fetch(generatedImageUrl, { mode: 'cors' });
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `AI_Fashion_Mirror_${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+    } catch (e) {
+      console.warn('Blob download fallback to direct link:', e);
+      window.open(generatedImageUrl, '_blank');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (

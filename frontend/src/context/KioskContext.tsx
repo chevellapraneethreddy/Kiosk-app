@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Experience, Style, Generation, SessionResponse, ResultResponse } from '../types';
-import { api } from '../services/api';
+import { api, envApiUrl, resolveMediaUrl } from '../services/api';
 
 export type KioskStep =
   | 'WELCOME'
@@ -98,13 +98,14 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!sessionData?.session?.id) return;
 
-    const eventSource = new EventSource(`/api/events?sessionId=${sessionData.session.id}`);
+    const sseBase = envApiUrl ? envApiUrl.replace(/\/$/, '') : '';
+    const eventSource = new EventSource(`${sseBase}/api/events?sessionId=${sessionData.session.id}`);
 
     eventSource.addEventListener('mobile_photo_uploaded', (e: any) => {
       try {
         const data = JSON.parse(e.data);
         if (data.photoUrl) {
-          setOriginalPhotoUrl(data.photoUrl);
+          setOriginalPhotoUrl(resolveMediaUrl(data.photoUrl));
         }
       } catch (err) {
         console.error('Error parsing SSE mobile upload event:', err);
@@ -130,10 +131,22 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     });
 
+    // Fallback polling every 3 seconds to guarantee photo upload detection
+    const pollInterval = setInterval(() => {
+      if (sessionData?.session?.sessionToken && !originalPhotoUrl) {
+        api.getSession(sessionData.session.sessionToken).then((sess: any) => {
+          if (sess?.uploadedPhotoUrl) {
+            setOriginalPhotoUrl(resolveMediaUrl(sess.uploadedPhotoUrl));
+          }
+        }).catch(() => {});
+      }
+    }, 3000);
+
     return () => {
       eventSource.close();
+      clearInterval(pollInterval);
     };
-  }, [sessionData]);
+  }, [sessionData, originalPhotoUrl]);
 
   return (
     <KioskContext.Provider

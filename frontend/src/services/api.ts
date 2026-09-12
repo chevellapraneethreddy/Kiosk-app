@@ -1,8 +1,21 @@
 import axios from 'axios';
 import { Experience, Style, Generation, SessionResponse, ResultResponse, AdminStats } from '../types';
 
-const envApiUrl = import.meta.env.VITE_API_URL;
-const API_BASE = envApiUrl ? `${envApiUrl.replace(/\/$/, '')}/api` : '/api';
+export const envApiUrl = import.meta.env.VITE_API_URL || '';
+export const API_BASE = envApiUrl ? `${envApiUrl.replace(/\/$/, '')}/api` : '/api';
+
+/**
+ * Resolves relative backend paths (/uploads/..., /generated/...) to absolute URLs
+ * using VITE_API_URL so cross-origin image loading and downloading work seamlessly.
+ */
+export const resolveMediaUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const backendBase = envApiUrl ? envApiUrl.replace(/\/$/, '') : '';
+  return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export const api = {
   // Health
@@ -72,13 +85,27 @@ export const api = {
 
   getGenerationStatus: async (id: string): Promise<Generation> => {
     const res = await axios.get(`${API_BASE}/generations/${id}/status`);
-    return res.data;
+    const data = res.data;
+    if (data?.generatedImagePath) {
+      data.generatedImagePath = resolveMediaUrl(data.generatedImagePath);
+    }
+    if (data?.originalImagePath) {
+      data.originalImagePath = resolveMediaUrl(data.originalImagePath);
+    }
+    return data;
   },
 
   // Results
   getResultByToken: async (token: string): Promise<ResultResponse> => {
     const res = await axios.get(`${API_BASE}/results/${token}`);
-    return res.data;
+    const data = res.data;
+    if (data?.generation?.generatedImagePath) {
+      data.generation.generatedImagePath = resolveMediaUrl(data.generation.generatedImagePath);
+    }
+    if (data?.generation?.originalImagePath) {
+      data.generation.originalImagePath = resolveMediaUrl(data.generation.originalImagePath);
+    }
+    return data;
   },
 
   // Admin API

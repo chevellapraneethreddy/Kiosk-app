@@ -31,21 +31,27 @@ export async function getResultByToken(req: Request, res: Response) {
     const publicResultUrl = `${frontendBaseUrl}/result/${generation.publicToken}`;
     const qrDataUrl = await generateQrDataUrl(publicResultUrl);
 
-    // Also generate direct local LAN URL (failsafe for same Wi-Fi)
-    const lanBaseUrl = getLocalFrontendUrl();
-    const lanResultUrl = `${lanBaseUrl}/result/${generation.publicToken}`;
-    const lanQrDataUrl = await generateQrDataUrl(lanResultUrl);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // In local development only, also generate direct local LAN URL (failsafe for same Wi-Fi)
+    let lanResultUrl: string | undefined;
+    let lanQrDataUrl: string | undefined;
+
+    if (!isProduction) {
+      const lanBaseUrl = getLocalFrontendUrl();
+      lanResultUrl = `${lanBaseUrl}/result/${generation.publicToken}`;
+      lanQrDataUrl = await generateQrDataUrl(lanResultUrl);
+      logger.info(`[QR DEBUG] Wi-Fi LAN Result URL: ${lanResultUrl}`);
+    }
 
     logger.info(`[QR DEBUG] Result Token Requested: ${generation.publicToken}`);
     logger.info(`[QR DEBUG] Primary Result URL: ${publicResultUrl}`);
-    logger.info(`[QR DEBUG] Wi-Fi LAN Result URL: ${lanResultUrl}`);
 
     res.json({
       generation,
       publicResultUrl,
       qrDataUrl,
-      lanResultUrl,
-      lanQrDataUrl,
+      ...(lanResultUrl && { lanResultUrl, lanQrDataUrl }),
       isTunnel: frontendBaseUrl.startsWith('https://'),
     });
   } catch (error: any) {

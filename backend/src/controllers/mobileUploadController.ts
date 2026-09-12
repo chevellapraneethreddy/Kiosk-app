@@ -49,7 +49,9 @@ export async function handleMobileUpload(req: Request, res: Response) {
     });
 
     res.json({
+      success: true,
       message: 'Photo uploaded successfully!',
+      filePath: relativeUrl,
       photoUrl: relativeUrl,
       publicUrl: storageService.getPublicUrl(relativeUrl),
     });

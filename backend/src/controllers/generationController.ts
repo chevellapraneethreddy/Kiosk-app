@@ -22,8 +22,14 @@ export async function createGeneration(req: Request, res: Response) {
       });
     }
 
-    // Resolve absolute path for original user photo
-    const fullUserImgPath = path.resolve(__dirname, '../../..', originalImagePath.replace(/^\//, ''));
+    // Resolve absolute path for original user photo (handling full URLs or relative paths)
+    let cleanUserImgPath = originalImagePath;
+    if (cleanUserImgPath.startsWith('http://') || cleanUserImgPath.startsWith('https://')) {
+      try {
+        cleanUserImgPath = new URL(cleanUserImgPath).pathname;
+      } catch {}
+    }
+    const fullUserImgPath = path.resolve(__dirname, '../../..', cleanUserImgPath.replace(/^\//, ''));
 
     if (!fs.existsSync(fullUserImgPath)) {
       return res.status(400).json({
@@ -35,6 +41,11 @@ export async function createGeneration(req: Request, res: Response) {
 
     // 1. Resolve garment image: check if provided or needs automatic extraction
     let finalGarmentRelativePath = garmentImagePath;
+    if (finalGarmentRelativePath && (finalGarmentRelativePath.startsWith('http://') || finalGarmentRelativePath.startsWith('https://'))) {
+      try {
+        finalGarmentRelativePath = new URL(finalGarmentRelativePath).pathname;
+      } catch {}
+    }
     let fullGarmentPath = finalGarmentRelativePath
       ? path.resolve(__dirname, '../../..', finalGarmentRelativePath.replace(/^\//, ''))
       : null;

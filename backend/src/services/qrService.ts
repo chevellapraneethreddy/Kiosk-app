@@ -5,9 +5,9 @@ export async function generateQrDataUrl(text: string): Promise<string> {
     errorCorrectionLevel: 'H',
     type: 'image/png',
     margin: 2,
-    width: 400,
+    width: 480,
     color: {
-      dark: '#161b33',
+      dark: '#000000',
       light: '#ffffff',
     },
   });

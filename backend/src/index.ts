@@ -21,6 +21,17 @@ const uploadsDir = path.resolve(__dirname, '../../uploads');
 const generatedDir = path.resolve(__dirname, '../../generated');
 const assetsDir = path.resolve(__dirname, '../../frontend/public/assets');
 
+// Ensure static directories exist
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
+
+// Always attach Cross-Origin headers to static uploads, generated images, and assets
+app.use(['/uploads', '/generated', '/assets'], (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 app.use('/uploads', express.static(uploadsDir));
 app.use('/generated', express.static(generatedDir));
 app.use('/assets', express.static(assetsDir));
