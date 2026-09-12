@@ -3,7 +3,7 @@ import { prisma } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { generateQrDataUrl } from '../services/qrService';
 import { config } from '../config';
-import { getLocalIpAddress, getPublicFrontendUrl } from '../utils/ipHelper';
+import { getLocalIpAddress, getPublicFrontendUrl, getLocalFrontendUrl } from '../utils/ipHelper';
 import { logger } from '../utils/logger';
 
 export async function createSession(req: Request, res: Response) {
@@ -19,21 +19,27 @@ export async function createSession(req: Request, res: Response) {
       },
     });
 
-    // Resolve public frontend URL on LAN (port 5173) for phone QR scanning
+    // Resolve public frontend URL (Tunnel or LAN) for phone QR scanning
     const frontendBaseUrl = getPublicFrontendUrl();
     const mobileUploadUrl = `${frontendBaseUrl}/mobile-upload/${sessionToken}`;
     const qrDataUrl = await generateQrDataUrl(mobileUploadUrl);
 
+    // Also generate direct local LAN URL (failsafe for same Wi-Fi)
+    const lanBaseUrl = getLocalFrontendUrl();
+    const lanUploadUrl = `${lanBaseUrl}/mobile-upload/${sessionToken}`;
+    const lanQrDataUrl = await generateQrDataUrl(lanUploadUrl);
+
     logger.info(`[QR DEBUG] Upload Session Created: ${session.id}`);
-    logger.info(`[QR DEBUG] Laptop LAN IP: ${getLocalIpAddress()}`);
-    logger.info(`[QR DEBUG] Frontend LAN URL: ${frontendBaseUrl}`);
-    logger.info(`[QR DEBUG] Mobile Upload URL: ${mobileUploadUrl}`);
-    logger.info(`[QR DEBUG] Encoded QR URL: ${mobileUploadUrl}`);
+    logger.info(`[QR DEBUG] Primary URL: ${mobileUploadUrl}`);
+    logger.info(`[QR DEBUG] Wi-Fi LAN URL: ${lanUploadUrl}`);
 
     res.json({
       session,
       mobileUploadUrl,
       qrDataUrl,
+      lanUploadUrl,
+      lanQrDataUrl,
+      isTunnel: frontendBaseUrl.startsWith('https://'),
     });
   } catch (error: any) {
     logger.error('[QR DEBUG] Error creating session QR:', error.message);

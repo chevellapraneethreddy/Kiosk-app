@@ -3,19 +3,35 @@ import { useKiosk } from '../context/KioskContext';
 import { ProgressScreen } from '../components/ProgressScreen';
 import { Button } from '../components/Button';
 import { api } from '../services/api';
-import { AlertCircle, RefreshCw, ArrowLeft, RotateCcw } from 'lucide-react';
+import { AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
 
 export const GenerationScreenPage: React.FC = () => {
   const { currentGeneration, setCurrentGeneration, setResultData, setStep, startNewExperience } = useKiosk();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentGeneration?.id) return;
-
     let isMounted = true;
     let pollTimer: any = null;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 90000; // 90 second safety timeout
+
+    // If currentGeneration has not been set within 5 seconds, prompt retry
+    const noGenSafetyTimer = setTimeout(() => {
+      if (isMounted && !currentGeneration?.id) {
+        setErrorMsg('Generation request timed out before starting. Please retake your photo.');
+      }
+    }, 5000);
 
     const checkStatus = async () => {
+      if (!currentGeneration?.id) return;
+
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        if (isMounted) {
+          setErrorMsg('Virtual try-on took longer than expected. Please try again.');
+        }
+        return;
+      }
+
       try {
         const gen = await api.getGenerationStatus(currentGeneration.id);
         if (!isMounted) return;
@@ -25,25 +41,35 @@ export const GenerationScreenPage: React.FC = () => {
         if (gen.status === 'COMPLETED') {
           if (gen.publicToken) {
             const res = await api.getResultByToken(gen.publicToken);
-            setResultData(res);
-            setStep('RESULT');
+            if (isMounted) {
+              setResultData(res);
+              setStep('RESULT');
+            }
           }
         } else if (gen.status === 'FAILED') {
-          setErrorMsg(gen.errorMessage || 'AI generation encountered an error. Please try again.');
+          if (isMounted) {
+            setErrorMsg(gen.errorMessage || 'AI generation encountered an error. Please try again.');
+          }
         } else {
-          pollTimer = setTimeout(checkStatus, 1000);
+          // Still processing, poll again in 1.5s
+          pollTimer = setTimeout(checkStatus, 1500);
         }
       } catch (err: any) {
         if (isMounted) {
-          setErrorMsg(err.message || 'Failed to poll generation status.');
+          // Transient network poll error, keep polling instead of failing immediately
+          pollTimer = setTimeout(checkStatus, 2500);
         }
       }
     };
 
-    checkStatus();
+    if (currentGeneration?.id) {
+      clearTimeout(noGenSafetyTimer);
+      checkStatus();
+    }
 
     return () => {
       isMounted = false;
+      clearTimeout(noGenSafetyTimer);
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [currentGeneration?.id]);
@@ -60,12 +86,26 @@ export const GenerationScreenPage: React.FC = () => {
           <p className="text-red-200 text-lg mb-8">{errorMsg}</p>
 
           <div className="flex flex-col space-y-4 w-full">
-            <Button variant="primary" size="lg" onClick={() => setStep('LIVE_STANDEE')}>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                setErrorMsg(null);
+                setStep('LIVE_STANDEE');
+              }}
+            >
               <RefreshCw className="w-6 h-6 mr-2" />
               <span>RETAKE PHOTO & TRY AGAIN</span>
             </Button>
 
-            <Button variant="outline" size="lg" onClick={startNewExperience}>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setErrorMsg(null);
+                startNewExperience();
+              }}
+            >
               <RotateCcw className="w-6 h-6 mr-2" />
               <span>START OVER</span>
             </Button>
@@ -75,7 +115,5 @@ export const GenerationScreenPage: React.FC = () => {
     );
   }
 
-  return (
-    <ProgressScreen progress={currentGeneration?.progress || 0} />
-  );
+  return <ProgressScreen progress={currentGeneration?.progress || 15} />;
 };

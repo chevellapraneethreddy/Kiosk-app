@@ -96,57 +96,23 @@ export const MobileResultPage: React.FC = () => {
         ) : (
           <div className="w-full glass-panel p-5 rounded-3xl border-2 border-gold-500/40 flex flex-col items-center shadow-2xl space-y-4">
             
-            {/* View Selector: OUTPUT vs INPUT */}
-            <div className="w-full flex items-center bg-black/60 p-1 rounded-2xl border border-gold-500/30">
-              <button
-                onClick={() => setActiveView('OUTPUT')}
-                className={`flex-1 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all ${
-                  activeView === 'OUTPUT' ? 'gold-button text-black shadow-md' : 'text-gray-300'
-                }`}
-              >
-                OUTPUT (AI TRY-ON)
-              </button>
-              <button
-                onClick={() => setActiveView('INPUT')}
-                className={`flex-1 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all ${
-                  activeView === 'INPUT' ? 'gold-button text-black shadow-md' : 'text-gray-300'
-                }`}
-              >
-                INPUT (CAMERA PHOTO)
-              </button>
-            </div>
-
             {/* Image Display */}
             <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden glass-card border-2 border-gold-400/50 shadow-xl bg-black">
-              {activeView === 'OUTPUT' ? (
-                result?.generation?.generatedImagePath ? (
-                  <img
-                    src={result.generation.generatedImagePath}
-                    alt="AI Generated Virtual Try-On"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No generated image available
-                  </div>
-                )
+              {result?.generation?.generatedImagePath ? (
+                <img
+                  src={result.generation.generatedImagePath}
+                  alt="AI Generated Virtual Try-On"
+                  className="w-full h-full object-cover"
+                />
               ) : (
-                result?.generation?.originalImagePath ? (
-                  <img
-                    src={result.generation.originalImagePath}
-                    alt="Input Captured Photo"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No input image available
-                  </div>
-                )
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  No generated image available
+                </div>
               )}
 
               <div className="absolute bottom-3 left-3 right-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-gold-500/40 text-center">
                 <p className="text-xs text-gold-300 font-bold uppercase tracking-wider">
-                  {activeView === 'OUTPUT' ? '✨ You are wearing the same garment!' : '📸 Captured Camera Photo'}
+                  ✨ YOUR AI VIRTUAL TRY-ON LOOK
                 </p>
               </div>
             </div>

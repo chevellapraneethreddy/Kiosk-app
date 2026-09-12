@@ -53,12 +53,18 @@ export interface SessionResponse {
   };
   mobileUploadUrl: string;
   qrDataUrl: string;
+  lanUploadUrl?: string;
+  lanQrDataUrl?: string;
+  isTunnel?: boolean;
 }
 
 export interface ResultResponse {
   generation: Generation;
   publicResultUrl: string;
   qrDataUrl: string;
+  lanResultUrl?: string;
+  lanQrDataUrl?: string;
+  isTunnel?: boolean;
 }
 
 export interface AdminStats {

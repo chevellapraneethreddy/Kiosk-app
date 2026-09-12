@@ -36,3 +36,9 @@ generated/*
 Thumbs.db
 *.tmp
 cloudflared.exe
+
+# Scratch & one-off test scripts
+backend/test_*.mjs
+backend/scratch_*.mjs
+*.mjs
+

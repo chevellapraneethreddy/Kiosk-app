@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { Experience, Style, Generation, SessionResponse, ResultResponse, AdminStats } from '../types';
 
-const API_BASE = '/api';
+const envApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE = envApiUrl ? `${envApiUrl.replace(/\/$/, '')}/api` : '/api';
 
 export const api = {
   // Health

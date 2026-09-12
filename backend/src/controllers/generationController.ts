@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { v4 as uuidv4 } from 'uuid';
-import { getAIProvider } from '../services/ai';
+import { decartVtonService } from '../services/DecartVtonService';
 import { garmentExtractionService } from '../services/ai/GarmentExtractionService';
 import { config } from '../config';
+import { sseService } from '../services/sseService';
 import path from 'path';
 import fs from 'fs';
 import { logger } from '../utils/logger';
@@ -11,7 +12,7 @@ import { logger } from '../utils/logger';
 export async function createGeneration(req: Request, res: Response) {
   let generationId: string | null = null;
   try {
-    const { sessionId, experienceId, styleId, originalImagePath, category, customPrompt } = req.body;
+    const { sessionId, experienceId, styleId, originalImagePath, garmentImagePath, category, customPrompt } = req.body;
 
     if (!originalImagePath) {
       return res.status(400).json({
@@ -32,10 +33,22 @@ export async function createGeneration(req: Request, res: Response) {
       });
     }
 
-    // 1. Extract held garment automatically from captured camera photo
-    logger.info('[DECART] Invoking garment extraction on captured camera photo...');
-    const extractedGarmentRelativePath = await garmentExtractionService.extractGarment(fullUserImgPath);
-    const fullGarmentPath = path.resolve(__dirname, '../../..', extractedGarmentRelativePath.replace(/^\//, ''));
+    // 1. Resolve garment image: check if provided or needs automatic extraction
+    let finalGarmentRelativePath = garmentImagePath;
+    let fullGarmentPath = finalGarmentRelativePath
+      ? path.resolve(__dirname, '../../..', finalGarmentRelativePath.replace(/^\//, ''))
+      : null;
+    let extractedPrompt: string | undefined = undefined;
+    let extractedCategory: string | undefined = category;
+
+    if (!fullGarmentPath || !fs.existsSync(fullGarmentPath) || path.resolve(fullGarmentPath) === path.resolve(fullUserImgPath)) {
+      logger.info('[DECART] Extracting held garment from captured camera photo...');
+      const garmentInfo = await garmentExtractionService.extractGarmentInfo(fullUserImgPath);
+      finalGarmentRelativePath = garmentInfo.garmentPath;
+      fullGarmentPath = path.resolve(__dirname, '../../..', finalGarmentRelativePath.replace(/^\//, ''));
+      extractedPrompt = garmentInfo.recommendedPrompt;
+      extractedCategory = garmentInfo.category;
+    }
 
     // Verify relations to prevent Prisma Foreign Key Constraint errors
     let validSessionId: string | null = null;
@@ -78,10 +91,10 @@ export async function createGeneration(req: Request, res: Response) {
     const generationData: any = {
       publicToken,
       originalImagePath,
-      garmentImagePath: extractedGarmentRelativePath,
+      garmentImagePath: finalGarmentRelativePath,
       provider: 'decart',
-      status: 'PENDING',
-      progress: 10,
+      status: 'PROCESSING',
+      progress: 15,
       expiresAt,
     };
     if (validSessionId) generationData.sessionId = validSessionId;
@@ -94,44 +107,78 @@ export async function createGeneration(req: Request, res: Response) {
 
     generationId = generation.id;
 
-    // Trigger Decart Lucy Virtual Try-On 3.5 Provider
-    const aiProvider = getAIProvider();
+    // Send generation record back to client immediately so UI never hangs
+    res.status(201).json(generation);
+
+    // Asynchronously process virtual try-on via Decart Lucy VTON in background
     const promptToUse =
       customPrompt ||
-      'Substitute the current clothing with the reference garment, wearing the garment naturally, dressed in the garment, perfect fit, full body dress, photo realistic';
+      extractedPrompt ||
+      'The exact same person standing in the same room gracefully wearing the exact reference garment. Both arms relaxed and hanging naturally beside the body with empty hands. The folded cloth held in front of the body is completely removed and transformed into the worn outfit. Centered 3/4-body fashion portrait, complete face and head fully visible. Authentic room environment preserved.';
 
-    logger.info(`Starting Decart Lucy VTON 3.5 generation for ID: ${generation.id}...`);
+    (async () => {
+      try {
+        logger.info(`[DECART] Background try-on started for generation ${generation.id}`);
 
-    const aiOutput = await aiProvider.generateImage({
-      generationId: generation.id,
-      userImagePath: fullUserImgPath,
-      prompt: promptToUse,
-      styleName: 'Physical Garment Try-On',
-      styleCategory: category || 'tops',
-      options: {
-        garmentImagePath: fullGarmentPath,
-        category: category || 'tops',
-      },
-    });
+        const aiOutput = await decartVtonService.processTryOn({
+          generationId: generation.id,
+          userImagePath: fullUserImgPath,
+          garmentImagePath: fullGarmentPath || undefined,
+          category: category || extractedCategory || 'tops',
+          prompt: promptToUse,
+          onProgress: async (progress, msg) => {
+            await prisma.generation.update({
+              where: { id: generation.id },
+              data: { progress },
+            }).catch(() => {});
+            sseService.sendEventToGeneration(generation.id, 'generation_progress', {
+              generationId: generation.id,
+              progress,
+              message: msg,
+            });
+          },
+        });
 
-    if (!aiOutput.resultUrl || aiOutput.resultUrl === originalImagePath) {
-      logger.error('[DECART] Error: Generated try-on image URL is missing or identical to input camera image.');
-      throw new Error('Virtual try-on output was identical to original input image');
-    }
+        if (!aiOutput.resultUrl || aiOutput.resultUrl === originalImagePath) {
+          throw new Error('Virtual try-on output was identical to original input image or missing');
+        }
 
-    // Update generation record in database with Decart result
-    const updatedGen = await prisma.generation.update({
-      where: { id: generation.id },
-      data: {
-        providerJobId: aiOutput.jobId,
-        status: aiOutput.status,
-        progress: aiOutput.progress || 100,
-        generatedImagePath: aiOutput.resultUrl || null,
-        completedAt: new Date(),
-      },
-    });
+        const completedGen = await prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            providerJobId: aiOutput.jobId,
+            status: 'COMPLETED',
+            progress: 100,
+            generatedImagePath: aiOutput.resultUrl,
+            completedAt: new Date(),
+          },
+        });
 
-    res.json(updatedGen);
+        logger.info(`[DECART] Background generation ${generation.id} completed successfully`);
+
+        // Notify client via SSE
+        sseService.sendEventToGeneration(generation.id, 'generation_complete', {
+          generationId: generation.id,
+          publicToken: generation.publicToken,
+          resultUrl: aiOutput.resultUrl,
+          generation: completedGen,
+        });
+      } catch (bgError: any) {
+        logger.error(`[DECART] Background generation ${generation.id} failed:`, bgError.message);
+        await prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: bgError.message || 'Decart Virtual Try-On failed',
+          },
+        }).catch(() => {});
+
+        sseService.sendEventToGeneration(generation.id, 'generation_failed', {
+          generationId: generation.id,
+          error: bgError.message || 'Decart Virtual Try-On failed',
+        });
+      }
+    })();
   } catch (error: any) {
     logger.error('[DECART] Error in createGeneration:', error.message);
 

@@ -13,6 +13,7 @@ export const LiveStandeePage: React.FC = () => {
     setOriginalPhotoUrl,
     setCurrentGeneration,
     originalPhotoUrl,
+    initializeSession,
   } = useKiosk();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -36,7 +37,7 @@ export const LiveStandeePage: React.FC = () => {
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 1706 }, facingMode: 'user' },
+        video: { width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 }, facingMode: 'user' },
         audio: false,
       });
       setStream(mediaStream);
@@ -77,8 +78,8 @@ export const LiveStandeePage: React.FC = () => {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1080;
-    canvas.height = video.videoHeight || 1440;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
@@ -103,7 +104,10 @@ export const LiveStandeePage: React.FC = () => {
     }
   };
 
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+
   const handleRetake = () => {
+    setErrorBanner(null);
     setCapturedDataUrl(null);
     setCapturedBlob(null);
     startCamera();
@@ -114,6 +118,7 @@ export const LiveStandeePage: React.FC = () => {
 
     try {
       setIsProcessing(true);
+      setErrorBanner(null);
       let blobToUpload = capturedBlob;
       if (!blobToUpload && capturedDataUrl) {
         const res = await fetch(capturedDataUrl);
@@ -128,21 +133,19 @@ export const LiveStandeePage: React.FC = () => {
       const uploaded = await api.uploadImage(file);
       setOriginalPhotoUrl(uploaded.filePath);
 
-      // 2. Advance to Generating screen
-      setStep('GENERATING');
-
-      // 3. Trigger Decart Virtual Try-On API (with automatic held garment extraction)
+      // 2. Trigger Decart Virtual Try-On API (backend returns immediately with status PROCESSING)
       const gen = await api.createGeneration({
         sessionId: sessionData?.session?.id,
         originalImagePath: uploaded.filePath,
       });
 
+      // 3. Set generation state and transition smoothly to progress screen
       setCurrentGeneration(gen);
+      setStep('GENERATING');
     } catch (err: any) {
       const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
       console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
-      alert(`Virtual try-on failed\n\nPlease try again.\n(${serverDetails})`);
-      setStep('LIVE_STANDEE');
+      setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -150,12 +153,12 @@ export const LiveStandeePage: React.FC = () => {
 
   const handleMobilePhotoTrigger = async () => {
     if (!originalPhotoUrl) {
-      alert('Please upload a photo from your phone first!');
+      setErrorBanner('Please upload a photo from your phone first!');
       return;
     }
     try {
       setIsProcessing(true);
-      setStep('GENERATING');
+      setErrorBanner(null);
 
       const gen = await api.createGeneration({
         sessionId: sessionData?.session?.id,
@@ -163,11 +166,11 @@ export const LiveStandeePage: React.FC = () => {
       });
 
       setCurrentGeneration(gen);
+      setStep('GENERATING');
     } catch (err: any) {
       const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
       console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
-      alert(`Virtual try-on failed\n\nPlease try again.\n(${serverDetails})`);
-      setStep('LIVE_STANDEE');
+      setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -187,6 +190,19 @@ export const LiveStandeePage: React.FC = () => {
             <span className="text-9xl font-serif font-black gold-gradient-text animate-bounce">
               {countdown}
             </span>
+          </div>
+        )}
+
+        {/* Optional Error Banner */}
+        {errorBanner && (
+          <div className="z-40 w-full max-w-md mb-4 bg-red-950/80 border-2 border-red-500/60 rounded-2xl p-4 flex items-center justify-between shadow-2xl backdrop-blur-md animate-fade-in">
+            <p className="text-red-200 text-xs md:text-sm font-medium">{errorBanner}</p>
+            <button
+              onClick={() => setErrorBanner(null)}
+              className="ml-3 px-3 py-1 bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs font-bold rounded-lg transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -247,14 +263,22 @@ export const LiveStandeePage: React.FC = () => {
             {/* Pose Guideline Box */}
             {!capturedDataUrl && (
               <div className="absolute inset-0 pointer-events-none border-4 border-gold-500/20 rounded-3xl flex flex-col items-center justify-between p-6">
-                <div className="w-64 h-96 border-2 border-dashed border-gold-400/70 rounded-3xl mt-4 flex flex-col items-center justify-center p-4 text-center bg-black/30 backdrop-blur-[2px]">
-                  <Sparkles className="w-8 h-8 text-gold-400 mb-2 animate-bounce" />
-                  <p className="text-xs uppercase tracking-widest text-gold-300 font-bold px-3 py-1.5 bg-black/70 rounded-xl border border-gold-500/30">
-                    Hold Garment Clearly In Frame
-                  </p>
+                <div className="w-72 h-[420px] border-2 border-dashed border-gold-400/80 rounded-3xl mt-2 flex flex-col items-center justify-between p-4 text-center bg-black/30 backdrop-blur-[2px]">
+                  <div className="w-24 h-28 border border-gold-400/50 rounded-full flex flex-col items-center justify-center bg-gold-500/10">
+                    <Sparkles className="w-6 h-6 text-gold-400 mb-1 animate-pulse" />
+                    <span className="text-[10px] uppercase font-bold text-gold-300">Head / Face</span>
+                  </div>
+                  <div className="w-full py-2 px-3 bg-black/70 rounded-xl border border-gold-500/40">
+                    <p className="text-xs uppercase tracking-wider text-gold-300 font-extrabold">
+                      Hold Garment Below Chest
+                    </p>
+                    <p className="text-[10px] text-gray-300 mt-0.5">
+                      Step back 4-6 ft so your full face & torso are in frame
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs uppercase tracking-widest text-gold-300 bg-black/80 px-5 py-2 rounded-full border border-gold-500/40 font-bold">
-                  Ready? Click CAPTURE PHOTO below
+                <p className="text-xs uppercase tracking-widest text-gold-300 bg-black/85 px-6 py-2 rounded-full border border-gold-500/40 font-bold shadow-lg">
+                  Ready? Stand centered & click CAPTURE PHOTO
                 </p>
               </div>
             )}
@@ -275,6 +299,10 @@ export const LiveStandeePage: React.FC = () => {
             {sessionData?.qrDataUrl ? (
               <QRCodePanel
                 qrDataUrl={sessionData.qrDataUrl}
+                lanQrDataUrl={sessionData.lanQrDataUrl}
+                mobileUrl={sessionData.mobileUploadUrl}
+                lanUrl={sessionData.lanUploadUrl}
+                onRefresh={initializeSession}
                 title="Mobile Upload QR Code"
                 subtitle="Scan with your phone camera to upload a photo of yourself holding a saree/dress"
               />

@@ -10,7 +10,7 @@ import { api } from '../services/api';
 type Tab = 'CAMERA' | 'UPLOAD' | 'MOBILE';
 
 export const PhotoInputPage: React.FC = () => {
-  const { setStep, setOriginalPhotoUrl, sessionData, selectedExperience } = useKiosk();
+  const { setStep, setOriginalPhotoUrl, sessionData, selectedExperience, initializeSession } = useKiosk();
   const [activeTab, setActiveTab] = useState<Tab>('CAMERA');
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
@@ -85,6 +85,10 @@ export const PhotoInputPage: React.FC = () => {
                 {sessionData?.qrDataUrl ? (
                   <QRCodePanel
                     qrDataUrl={sessionData.qrDataUrl}
+                    lanQrDataUrl={sessionData.lanQrDataUrl}
+                    mobileUrl={sessionData.mobileUploadUrl}
+                    lanUrl={sessionData.lanUploadUrl}
+                    onRefresh={initializeSession}
                     title="Mobile Upload QR Code"
                     subtitle="Scan with your smartphone to upload a photo directly to this kiosk"
                   />

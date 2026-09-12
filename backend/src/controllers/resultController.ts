@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { generateQrDataUrl } from '../services/qrService';
 import { config } from '../config';
-import { getLocalIpAddress, getPublicFrontendUrl } from '../utils/ipHelper';
+import { getLocalIpAddress, getPublicFrontendUrl, getLocalFrontendUrl } from '../utils/ipHelper';
 import { logger } from '../utils/logger';
 
 export async function getResultByToken(req: Request, res: Response) {
@@ -26,21 +26,27 @@ export async function getResultByToken(req: Request, res: Response) {
       return res.status(410).json({ error: 'This AI result image has expired.', expired: true });
     }
 
-    // Resolve public frontend URL on LAN (port 5173) for phone QR scanning
+    // Resolve public frontend URL (Tunnel or LAN) for phone QR scanning
     const frontendBaseUrl = getPublicFrontendUrl();
     const publicResultUrl = `${frontendBaseUrl}/result/${generation.publicToken}`;
     const qrDataUrl = await generateQrDataUrl(publicResultUrl);
 
+    // Also generate direct local LAN URL (failsafe for same Wi-Fi)
+    const lanBaseUrl = getLocalFrontendUrl();
+    const lanResultUrl = `${lanBaseUrl}/result/${generation.publicToken}`;
+    const lanQrDataUrl = await generateQrDataUrl(lanResultUrl);
+
     logger.info(`[QR DEBUG] Result Token Requested: ${generation.publicToken}`);
-    logger.info(`[QR DEBUG] Laptop LAN IP: ${getLocalIpAddress()}`);
-    logger.info(`[QR DEBUG] Frontend LAN URL: ${frontendBaseUrl}`);
-    logger.info(`[QR DEBUG] Mobile Result URL: ${publicResultUrl}`);
-    logger.info(`[QR DEBUG] Encoded Result QR URL: ${publicResultUrl}`);
+    logger.info(`[QR DEBUG] Primary Result URL: ${publicResultUrl}`);
+    logger.info(`[QR DEBUG] Wi-Fi LAN Result URL: ${lanResultUrl}`);
 
     res.json({
       generation,
       publicResultUrl,
       qrDataUrl,
+      lanResultUrl,
+      lanQrDataUrl,
+      isTunnel: frontendBaseUrl.startsWith('https://'),
     });
   } catch (error: any) {
     logger.error('[QR DEBUG] Error resolving result QR:', error.message);
