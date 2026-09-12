@@ -13,7 +13,6 @@
     "test": "jest --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "@decartai/sdk": "^0.1.22",
     "@gradio/client": "^2.6.0",
     "@prisma/client": "^5.22.0",
     "@types/ws": "^8.18.1",
@@ -27,6 +26,7 @@
     "form-data": "^4.0.6",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "openai": "^7.15.0",
     "qrcode": "^1.5.3",
     "sharp": "^0.33.2",
     "uuid": "^9.0.1",

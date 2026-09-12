@@ -18,8 +18,9 @@ const configSchema = z.object({
     }
     return val;
   }),
-  AI_PROVIDER: z.enum(['decart', 'fashn', 'huggingface', 'mock', 'custom', 'gemini', 'replicate', 'openai']).default('decart'),
-  DECART_API_KEY: z.string().optional(),
+  AI_PROVIDER: z.enum(['openai', 'gemini', 'mock', 'custom', 'replicate', 'fashn', 'huggingface']).default('openai'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_IMAGE_MODEL: z.string().default('gpt-image-1-mini'),
   MOCK_GENERATION_SECONDS: z.string().default('5').transform(val => parseInt(val, 10)),
   HF_TOKEN: z.string().optional(),
   HF_SPACE: z.string().default('fashn-ai/fashn-vton-1.5'),

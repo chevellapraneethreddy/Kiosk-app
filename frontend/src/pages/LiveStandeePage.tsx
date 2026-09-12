@@ -133,7 +133,7 @@ export const LiveStandeePage: React.FC = () => {
       const uploaded = await api.uploadImage(file);
       setOriginalPhotoUrl(uploaded.filePath);
 
-      // 2. Trigger Decart Virtual Try-On API (backend returns immediately with status PROCESSING)
+      // 2. Trigger OpenAI Virtual Try-On API (backend returns immediately with status PROCESSING)
       const gen = await api.createGeneration({
         sessionId: sessionData?.session?.id,
         originalImagePath: uploaded.filePath,

@@ -1,14 +1,22 @@
 import request from 'supertest';
 
-jest.mock('@decartai/sdk', () => ({
-  createDecartClient: jest.fn(() => ({})),
-  models: {},
+jest.mock('openai', () => ({
+  OpenAI: jest.fn().mockImplementation(() => ({
+    images: {
+      edit: jest.fn().mockResolvedValue({
+        data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }],
+      }),
+    },
+  })),
+  toFile: jest.fn().mockResolvedValue({}),
 }));
 
 import app from '../src/index';
 import { prisma } from '../src/db';
 
 describe('AI Digital Standee API Tests', () => {
+  jest.setTimeout(30000);
+
   beforeAll(async () => {
     // Ensure DB is initialized
     await prisma.$connect();

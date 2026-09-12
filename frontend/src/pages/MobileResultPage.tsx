@@ -111,13 +111,12 @@ export const MobileResultPage: React.FC = () => {
         ) : (
           <div className="w-full glass-panel p-5 rounded-3xl border-2 border-gold-500/40 flex flex-col items-center shadow-2xl space-y-4">
             
-            {/* Image Display */}
-            <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden glass-card border-2 border-gold-400/50 shadow-xl bg-black">
+            <div className="relative w-full aspect-[9/16] max-h-[70vh] rounded-2xl overflow-hidden glass-card border-2 border-gold-400/50 shadow-xl bg-black flex items-center justify-center">
               {result?.generation?.generatedImagePath ? (
                 <img
                   src={result.generation.generatedImagePath}
                   alt="AI Generated Virtual Try-On"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -172,7 +171,7 @@ export const MobileResultPage: React.FC = () => {
       </main>
 
       <footer className="w-full py-2 text-[10px] text-gray-400 uppercase tracking-widest text-center">
-        ✨ Real Virtual Try-On Kiosk • Powered by Decart AI ✨
+        ✨ Real Virtual Try-On Kiosk • Powered by OpenAI ✨
       </footer>
     </div>
   );

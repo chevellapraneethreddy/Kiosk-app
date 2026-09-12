@@ -9,8 +9,10 @@ services:
       - key: NODE_ENV
         value: production
       - key: AI_PROVIDER
-        value: decart
-      - key: DECART_API_KEY
+        value: openai
+      - key: OPENAI_IMAGE_MODEL
+        value: gpt-image-1-mini
+      - key: OPENAI_API_KEY
         sync: false
       - key: JWT_SECRET
         generateValue: true

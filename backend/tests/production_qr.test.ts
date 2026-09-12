@@ -1,8 +1,14 @@
 import request from 'supertest';
 
-jest.mock('@decartai/sdk', () => ({
-  createDecartClient: jest.fn(() => ({})),
-  models: {},
+jest.mock('openai', () => ({
+  OpenAI: jest.fn().mockImplementation(() => ({
+    images: {
+      edit: jest.fn().mockResolvedValue({
+        data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }],
+      }),
+    },
+  })),
+  toFile: jest.fn().mockResolvedValue({}),
 }));
 
 import app from '../src/index';
@@ -87,7 +93,7 @@ describe('Production QR Code & Cross-Domain End-to-End Tests', () => {
         publicToken: token,
         originalImagePath: '/uploads/sample_input.jpg',
         generatedImagePath: '/generated/sample_output.jpg',
-        provider: 'decart',
+        provider: 'openai',
         status: 'COMPLETED',
         progress: 100,
       },

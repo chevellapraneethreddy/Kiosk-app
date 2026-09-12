@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { v4 as uuidv4 } from 'uuid';
-import { decartVtonService } from '../services/DecartVtonService';
+import { openAiVtonService, buildOpenAITryOnPrompt } from '../services/OpenAIVtonService';
 import { garmentExtractionService } from '../services/ai/GarmentExtractionService';
 import { config } from '../config';
 import { sseService } from '../services/sseService';
@@ -18,7 +18,7 @@ export async function createGeneration(req: Request, res: Response) {
       return res.status(400).json({
         success: false,
         error: 'Missing required field: originalImagePath',
-        provider: 'decart',
+        provider: 'openai',
       });
     }
 
@@ -35,7 +35,7 @@ export async function createGeneration(req: Request, res: Response) {
       return res.status(400).json({
         success: false,
         error: `Original image not found at path: ${originalImagePath}`,
-        provider: 'decart',
+        provider: 'openai',
       });
     }
 
@@ -51,14 +51,16 @@ export async function createGeneration(req: Request, res: Response) {
       : null;
     let extractedPrompt: string | undefined = undefined;
     let extractedCategory: string | undefined = category;
+    let extractedDescription: string | undefined = undefined;
 
     if (!fullGarmentPath || !fs.existsSync(fullGarmentPath) || path.resolve(fullGarmentPath) === path.resolve(fullUserImgPath)) {
-      logger.info('[DECART] Extracting held garment from captured camera photo...');
+      logger.info('[OPENAI] Extracting held garment from captured camera photo...');
       const garmentInfo = await garmentExtractionService.extractGarmentInfo(fullUserImgPath);
       finalGarmentRelativePath = garmentInfo.garmentPath;
       fullGarmentPath = path.resolve(__dirname, '../../..', finalGarmentRelativePath.replace(/^\//, ''));
       extractedPrompt = garmentInfo.recommendedPrompt;
       extractedCategory = garmentInfo.category;
+      extractedDescription = garmentInfo.description;
     }
 
     // Verify relations to prevent Prisma Foreign Key Constraint errors
@@ -103,7 +105,7 @@ export async function createGeneration(req: Request, res: Response) {
       publicToken,
       originalImagePath,
       garmentImagePath: finalGarmentRelativePath,
-      provider: 'decart',
+      provider: 'openai',
       status: 'PROCESSING',
       progress: 15,
       expiresAt,
@@ -121,22 +123,20 @@ export async function createGeneration(req: Request, res: Response) {
     // Send generation record back to client immediately so UI never hangs
     res.status(201).json(generation);
 
-    // Asynchronously process virtual try-on via Decart Lucy VTON in background
-    const promptToUse =
-      customPrompt ||
-      extractedPrompt ||
-      'The exact same person standing in the same room gracefully wearing the exact reference garment. Both arms relaxed and hanging naturally beside the body with empty hands. The folded cloth held in front of the body is completely removed and transformed into the worn outfit. Centered 3/4-body fashion portrait, complete face and head fully visible. Authentic room environment preserved.';
+    // Asynchronously process virtual try-on via OpenAI gpt-image-2 in background
+    const effectiveCategory = category || extractedCategory || 'shirt';
 
     (async () => {
       try {
-        logger.info(`[DECART] Background try-on started for generation ${generation.id}`);
+        logger.info(`[OPENAI] Background try-on started for generation ${generation.id} (Category: ${effectiveCategory})`);
 
-        const aiOutput = await decartVtonService.processTryOn({
+        const aiOutput = await openAiVtonService.processTryOn({
           generationId: generation.id,
           userImagePath: fullUserImgPath,
           garmentImagePath: fullGarmentPath || undefined,
-          category: category || extractedCategory || 'tops',
-          prompt: promptToUse,
+          category: effectiveCategory,
+          description: extractedDescription,
+          prompt: customPrompt || undefined,
           onProgress: async (progress, msg) => {
             await prisma.generation.update({
               where: { id: generation.id },
@@ -165,7 +165,7 @@ export async function createGeneration(req: Request, res: Response) {
           },
         });
 
-        logger.info(`[DECART] Background generation ${generation.id} completed successfully`);
+        logger.info(`[OPENAI] Background generation ${generation.id} completed successfully`);
 
         // Notify client via SSE
         sseService.sendEventToGeneration(generation.id, 'generation_complete', {
@@ -175,39 +175,39 @@ export async function createGeneration(req: Request, res: Response) {
           generation: completedGen,
         });
       } catch (bgError: any) {
-        logger.error(`[DECART] Background generation ${generation.id} failed:`, bgError.message);
+        logger.error(`[OPENAI] Background generation ${generation.id} failed:`, bgError.message);
         await prisma.generation.update({
           where: { id: generation.id },
           data: {
             status: 'FAILED',
-            errorMessage: bgError.message || 'Decart Virtual Try-On failed',
+            errorMessage: bgError.message || 'OpenAI Virtual Try-On failed',
           },
         }).catch(() => {});
 
         sseService.sendEventToGeneration(generation.id, 'generation_failed', {
           generationId: generation.id,
-          error: bgError.message || 'Decart Virtual Try-On failed',
+          error: bgError.message || 'OpenAI Virtual Try-On failed',
         });
       }
     })();
   } catch (error: any) {
-    logger.error('[DECART] Error in createGeneration:', error.message);
+    logger.error('[OPENAI] Error in createGeneration:', error.message);
 
     if (generationId) {
       await prisma.generation.update({
         where: { id: generationId },
         data: {
           status: 'FAILED',
-          errorMessage: error.message || 'Decart Virtual Try-On failed',
+          errorMessage: error.message || 'OpenAI Virtual Try-On failed',
         },
       }).catch(() => {});
     }
 
     res.status(500).json({
       success: false,
-      error: 'Decart Virtual Try-On failed',
+      error: 'OpenAI Virtual Try-On failed',
       details: error.message || 'AI Generation failed',
-      provider: 'decart',
+      provider: 'openai',
       generationId,
     });
   }

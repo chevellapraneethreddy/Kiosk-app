@@ -27,7 +27,7 @@ const router = Router();
 router.get('/health', healthCheck);
 router.get('/tryon/health', handleTryOnHealth);
 
-// Standalone Decart Virtual Try-On endpoint
+// Standalone OpenAI Virtual Try-On endpoint
 router.post(
   '/tryon',
   uploadMiddleware.fields([

@@ -1,22 +1,22 @@
 import { AIProvider, GenerateImageInput, GenerateImageOutput, GenerationStatusOutput } from './AIProvider';
-import { DecartAIProvider } from './DecartAIProvider';
+import { OpenAIProvider } from './OpenAIProvider';
 
 /**
  * CustomAIProvider
- * Alias / wrapper around DecartAIProvider (Decart Lucy Virtual Try-On 3.5).
+ * Alias / wrapper around OpenAIProvider (OpenAI gpt-image-2).
  */
 export class CustomAIProvider implements AIProvider {
-  private decartProvider: DecartAIProvider;
+  private openaiProvider: OpenAIProvider;
 
   constructor() {
-    this.decartProvider = new DecartAIProvider();
+    this.openaiProvider = new OpenAIProvider();
   }
 
   async generateImage(input: GenerateImageInput): Promise<GenerateImageOutput> {
-    return this.decartProvider.generateImage(input);
+    return this.openaiProvider.generateImage(input);
   }
 
   async getStatus(jobId: string): Promise<GenerationStatusOutput> {
-    return this.decartProvider.getStatus(jobId);
+    return this.openaiProvider.getStatus(jobId);
   }
 }

@@ -8,7 +8,7 @@ import { storageService } from '../storageService';
 
 export interface ExtractedGarmentResult {
   garmentPath: string; // Relative path e.g. /uploads/extracted_garment_123.jpg
-  category: 'saree' | 'dress' | 'shirt' | 'suit' | 'top' | 'outfit';
+  category: 'saree' | 'dress' | 'shirt' | 'suit' | 'top' | 'outfit' | 't-shirt' | 'pants' | 'trousers' | 'jeans';
   description: string;
   recommendedPrompt: string;
   bbox?: { ymin: number; xmin: number; ymax: number; xmax: number };
@@ -57,7 +57,7 @@ export class GarmentExtractionService {
       height: Math.floor(height * 0.25),
     };
 
-    let category: 'saree' | 'dress' | 'shirt' | 'suit' | 'top' | 'outfit' = 'shirt';
+    let category: 'saree' | 'dress' | 'shirt' | 'suit' | 'top' | 'outfit' | 't-shirt' | 'pants' | 'trousers' | 'jeans' = 'shirt';
     let description = 'tailored garment with authentic pattern';
 
     // Attempt intelligent AI detection with gemini-3.6-flash
@@ -66,14 +66,21 @@ export class GarmentExtractionService {
         const base64Data = imageBuffer.toString('base64');
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${this.apiKey}`;
 
-        const promptText = `Identify the held saree, dress, shirt or garment in this image.
+        const promptText = `Accurately identify the garment being held or displayed by the person in this photo (for men or women):
+- Collared button-up shirts, casual/formal shirts -> "shirt"
+- Crewneck, v-neck, or graphic t-shirts -> "t-shirt"
+- Jeans, trousers, chinos, slacks -> "pants"
+- Sarees with border/pallu/drape -> "saree"
+- Dresses, gowns, frocks, kurtis, anarkalis -> "dress"
+- Suits, blazers, tuxedos -> "suit"
+
 Return ONLY a valid JSON object:
 {
-  "category": "saree" | "dress" | "shirt" | "suit" | "top",
-  "description": "detailed description of colors, fabric, pattern, borders",
+  "category": "saree" | "dress" | "shirt" | "t-shirt" | "pants" | "trousers" | "jeans" | "suit" | "top",
+  "description": "precise description of fabric, exact colors, pattern/prints/checks/borders, style",
   "bbox": { "ymin": number, "xmin": number, "ymax": number, "xmax": number }
 }
-bbox must be 0-1000 normalized coordinates for the held garment and hands holding it. Return strictly raw JSON.`;
+bbox must be 0-1000 normalized coordinates for the held fabric and hands holding it. Return strictly raw JSON.`;
 
         const response = await axios.post(
           geminiUrl,
@@ -140,21 +147,45 @@ bbox must be 0-1000 normalized coordinates for the held garment and hands holdin
       }
     }
 
-    // Inspect color from inner fabric region to refine fallback description if needed
+    // Inspect color from inner fabric region to refine color description
     try {
       const sample = await sharp(imageBuffer).extract(cropRegion).stats();
       const [r, g, b] = sample.channels.map((c) => Math.round(c.mean));
-      if (description.includes('tailored garment') || description.includes('authentic pattern')) {
-        if (r > 130 && r > g * 1.3) {
+
+      let detectedColor = '';
+      if (r > 160 && g > 130 && b > 140 && r > g && r > b) {
+        detectedColor = 'pink';
+      } else if (r > 130 && r > g * 1.2 && r > b * 1.2) {
+        detectedColor = 'red/pink';
+      } else if (b > r * 1.15 && b > g) {
+        detectedColor = 'blue';
+      } else if (g > r * 1.1 && g > b * 1.1) {
+        detectedColor = 'green';
+      } else if (r > 150 && g > 130 && b < 100) {
+        detectedColor = 'golden yellow';
+      }
+
+      // If held in front of upper body/chest, it is a shirt, top, saree or dress
+      if ((category === 'pants' || category === 'trousers' || category === 'jeans') && detectedBbox.ymin < 650) {
+        const descLower = description.toLowerCase();
+        if (descLower.includes('saree') || descLower.includes('sari') || descLower.includes('border') || descLower.includes('zari') || descLower.includes('pallu')) {
           category = 'saree';
-          description = 'pink silk saree with intricate gold zari border';
-        } else if (b > r && b > g) {
+          description = description.replace(/trousers?|pants?|jeans?/gi, 'saree');
+        } else if (descLower.includes('dress') || descLower.includes('gown') || descLower.includes('kurti')) {
+          category = 'dress';
+          description = description.replace(/trousers?|pants?|jeans?/gi, 'dress');
+        } else {
           category = 'shirt';
-          description = 'blue and grey plaid checkered short-sleeve collared shirt buttoned up';
-        } else if (r > 150 && g < 90 && b < 90) {
-          category = 'saree';
-          description = 'red traditional saree with gold zari details';
+          description = description.replace(/trousers?|pants?|jeans?/gi, 'shirt');
         }
+      }
+
+      if (category === 'shirt') {
+        description = description.replace(/trousers?|pants?|jeans?/gi, 'shirt');
+      }
+
+      if (detectedColor && !description.toLowerCase().includes(detectedColor.split('/')[0])) {
+        description = `${detectedColor} ${description}`;
       }
     } catch {}
 
@@ -171,13 +202,17 @@ bbox must be 0-1000 normalized coordinates for the held garment and hands holdin
     // Build tailored prompt matching user requirements
     let recommendedPrompt = '';
     if (category === 'saree') {
-      recommendedPrompt = `Fashion mirror portrait of the exact same adult woman with the exact same face, smile, skin tone, hair, and body standing gracefully in the room. She is wearing the reference ${description} realistically draped around her body with a matching blouse, wrapped waist, neat pleats, and the pallu crossing the torso over her left shoulder. Both arms are resting naturally beside her body with empty hands. No hands or folded cloth in front of chest. Complete face and head fully visible and sharp. Authentic room background preserved.`;
-    } else if (category === 'shirt' || category === 'top') {
-      recommendedPrompt = `Fashion mirror portrait of the exact same adult person with the exact same facial features, beard, mustache, glasses, skin tone, hair, and adult age standing naturally in the room. Wearing the reference ${description} neatly tailored and buttoned up with short sleeves, collar, and buttons fastened down the center. Both arms are hanging straight down naturally beside the body with empty hands resting at the hips. No hands or folded cloth in front of chest. Complete face, facial hair, beard, glasses, and head fully visible and sharp. Do not alter age or generate a child. Authentic room background preserved.`;
+      recommendedPrompt = `Full-length top-to-bottom fashion standee portrait of the exact same person standing gracefully in the room. She is wearing the reference ${description} realistically draped around her body from shoulders down to ankles with a matching blouse, neat waist pleats, and the pallu gracefully draped over the left shoulder across the torso. Full head to toe. Both arms resting naturally beside the hips with empty hands. Complete face and head fully visible and sharp. Authentic room background preserved.`;
+    } else if (category === 'pants' || category === 'trousers' || category === 'jeans') {
+      recommendedPrompt = `Full-length fashion portrait of the exact same person standing naturally in the room. Wearing the reference ${description} fitted on the lower body from the waistline and belt down along both legs to the shoes/ankles. Paired with a neat complementary neutral top. Both arms hanging straight down naturally with hands resting at hips. No hands holding cloth. Complete face, hair, and full body fully visible and sharp. Authentic room background preserved.`;
+    } else if (category === 't-shirt') {
+      recommendedPrompt = `Fashion mirror portrait of the exact same person standing naturally in the room wearing the reference ${description} fitted neatly over the torso, showing the collar/crewneck, sleeves, chest, and the entire t-shirt down to the bottom hem and waistline. Both arms relaxed and hanging naturally beside the body with empty hands at hips. No hands or folded cloth in front of chest. Complete face, hair, and head fully visible and sharp. Authentic room background preserved.`;
     } else if (category === 'dress') {
-      recommendedPrompt = `Fashion mirror portrait of the exact same adult person with the exact same face, skin tone, hair, and adult body standing gracefully in the room wearing the reference ${description} fitted elegantly from shoulders to hemline. Both arms resting naturally beside the body with empty hands. No hands or folded cloth in front of chest. Complete face and head fully visible and sharp. Authentic room background preserved.`;
+      recommendedPrompt = `Full-length fashion portrait of the exact same person standing gracefully in the room wearing the reference ${description} tailored elegantly from shoulders and bust down through the waist to the hemline. Both arms resting naturally beside the body with empty hands. Complete face and head fully visible and sharp. Authentic room background preserved.`;
+    } else if (category === 'shirt' || category === 'top') {
+      recommendedPrompt = `Fashion mirror portrait of the exact same person standing naturally in the room wearing the reference ${description} neatly tailored and buttoned up with sleeves, collar, and the entire shirt down to the bottom hem and waist. Both arms hanging straight down naturally beside the body with empty hands resting at the hips. No hands or folded cloth in front of chest. Complete face and head fully visible and sharp. Authentic room background preserved.`;
     } else {
-      recommendedPrompt = `Fashion mirror portrait of the exact same adult person with the exact same facial features, beard, mustache, glasses, skin tone, hair, and body standing naturally in the room wearing the reference ${description}. Both arms relaxed and hanging naturally beside the body with empty hands resting at the hips. No hands or folded cloth in front of chest. Complete face, facial hair, and head fully visible and sharp. Authentic room background preserved.`;
+      recommendedPrompt = `Fashion mirror portrait of the exact same person standing naturally in the room wearing the reference ${description} completely covering down to the hemline and waist. Both arms relaxed and hanging naturally beside the body with empty hands resting at the hips. Complete face and head fully visible and sharp. Authentic room background preserved.`;
     }
 
     return {

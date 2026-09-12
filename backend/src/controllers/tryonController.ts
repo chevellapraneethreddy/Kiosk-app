@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { decartVtonService } from '../services/DecartVtonService';
+import { openAiVtonService } from '../services/OpenAIVtonService';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import path from 'path';
@@ -29,15 +29,15 @@ export async function handleTryOn(req: Request, res: Response) {
       return res.status(400).json({
         success: false,
         error: 'Missing or invalid personImage file',
-        provider: 'decart',
+        provider: 'openai',
       });
     }
 
-    const category = req.body.category || 'tops';
+    const category = req.body.category || 'shirt';
 
     logger.info(`[TRYON Controller] Received POST /api/tryon (Category: ${category})`);
 
-    const result = await decartVtonService.processTryOn({
+    const result = await openAiVtonService.processTryOn({
       generationId: `tryon_${Date.now()}`,
       userImagePath: personImgPath,
       garmentImagePath: garmentImgPath,
@@ -47,24 +47,25 @@ export async function handleTryOn(req: Request, res: Response) {
     return res.json({
       success: true,
       resultUrl: result.resultUrl,
-      provider: 'decart',
+      provider: 'openai',
     });
   } catch (error: any) {
     logger.error('[TRYON Controller] Failed:', error.message);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Decart Virtual Try-On failed',
-      provider: 'decart',
+      error: error.message || 'OpenAI Virtual Try-On failed',
+      provider: 'openai',
     });
   }
 }
 
 export async function handleTryOnHealth(req: Request, res: Response) {
-  const decartKey = config.DECART_API_KEY || process.env.DECART_API_KEY || '';
+  const openaiKey = config.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+  const model = config.OPENAI_IMAGE_MODEL || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
   res.json({
     success: true,
-    provider: 'decart',
-    model: 'lucy-vton-3.5',
-    decartKeyConfigured: !!decartKey,
+    provider: 'openai',
+    model,
+    openaiKeyConfigured: !!openaiKey,
   });
 }

@@ -66,14 +66,14 @@ if (require.main === module) {
   const PORT = config.PORT || 5000;
   app.listen(PORT, '0.0.0.0', () => {
     const localIp = getLocalIpAddress();
-    const decartConfigured = !!(config.DECART_API_KEY || process.env.DECART_API_KEY);
+    const openaiConfigured = !!(config.OPENAI_API_KEY || process.env.OPENAI_API_KEY);
 
     logger.info(`=======================================================`);
     logger.info(`✨ AI DIGITAL STANDEE BACKEND SERVER IS RUNNING ✨`);
     logger.info(`- Local URL:          http://localhost:${PORT}`);
     logger.info(`- LAN Wi-Fi URL:      http://${localIp}:${PORT}`);
-    logger.info(`- Active AI Provider: DECART (Lucy Virtual Try-On 3.5)`);
-    logger.info(`- DECART_API_KEY configured: ${decartConfigured}`);
+    logger.info(`- Active AI Provider: OPENAI (${config.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini'})`);
+    logger.info(`- OPENAI_API_KEY configured: ${openaiConfigured}`);
     logger.info(`- Database URL:       ${config.DATABASE_URL}`);
     logger.info(`=======================================================`);
 

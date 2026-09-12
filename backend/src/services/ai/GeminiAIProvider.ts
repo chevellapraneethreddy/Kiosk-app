@@ -67,8 +67,8 @@ export class GeminiAIProvider implements AIProvider {
         }
       }
 
-      // 2. Seamlessly execute Decart Virtual Try-On API as primary try-on engine
-      logger.info('Executing Decart AI Virtual Try-On transformation...');
+      // 2. Seamlessly execute OpenAI Virtual Try-On API as primary try-on engine
+      logger.info('Executing OpenAI Virtual Try-On transformation...');
       return await this.customProvider.generateImage(input);
     } catch (error: any) {
       logger.error('GeminiAIProvider error:', error.message);

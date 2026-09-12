@@ -55,7 +55,7 @@ export const ResultScreenPage: React.FC = () => {
   const lanResultUrl = resultData?.lanResultUrl || remoteData?.lanResultUrl;
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden z-50 bg-black">
+    <div className="fixed inset-0 w-full h-full overflow-hidden z-50 bg-black">
       {generatedImageUrl && qrDataUrl ? (
         <ResultViewer
           generatedImageUrl={generatedImageUrl}
