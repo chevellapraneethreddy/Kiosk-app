@@ -3,8 +3,10 @@ import { useKiosk } from '../context/KioskContext';
 import { Header } from '../components/Header';
 import { Button } from '../components/Button';
 import { QRCodePanel } from '../components/QRCodePanel';
+import { GarmentConflictModal } from '../components/GarmentConflictModal';
 import { api } from '../services/api';
-import { Camera, Wand2, Smartphone, RotateCcw, Check, RefreshCw, Sparkles } from 'lucide-react';
+import { FashionGender, FashionCategory } from '../types';
+import { Camera, Wand2, Smartphone, RotateCcw, Check, RefreshCw, Sparkles, SlidersHorizontal } from 'lucide-react';
 
 export const LiveStandeePage: React.FC = () => {
   const {
@@ -14,7 +16,14 @@ export const LiveStandeePage: React.FC = () => {
     setCurrentGeneration,
     originalPhotoUrl,
     initializeSession,
+    selectedGender,
+    setSelectedGender,
+    selectedCategory,
+    setSelectedCategory,
   } = useKiosk();
+
+  const currentGender = selectedGender || 'WOMEN';
+  const currentCategory = selectedCategory || (currentGender === 'WOMEN' ? 'Saree' : 'Shirt');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -26,6 +35,15 @@ export const LiveStandeePage: React.FC = () => {
   const [isMirror, setIsMirror] = useState<boolean>(true);
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+
+  // Conflict validation modal state
+  const [conflictData, setConflictData] = useState<{
+    detectedGender: string;
+    detectedCategory: string;
+    detectedDescription?: string;
+    message?: string;
+  } | null>(null);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     startCamera();
@@ -108,9 +126,47 @@ export const LiveStandeePage: React.FC = () => {
 
   const handleRetake = () => {
     setErrorBanner(null);
+    setIsConflictModalOpen(false);
     setCapturedDataUrl(null);
     setCapturedBlob(null);
     startCamera();
+  };
+
+  const executeGeneration = async (photoPath: string, genderToUse: string, categoryToUse: string) => {
+    try {
+      setIsProcessing(true);
+      setErrorBanner(null);
+
+      // Trigger Virtual Try-On API with strict Category & Gender
+      const gen = await api.createGeneration({
+        sessionId: sessionData?.session?.id,
+        originalImagePath: photoPath,
+        gender: genderToUse,
+        category: categoryToUse,
+      });
+
+      setCurrentGeneration(gen);
+      setStep('GENERATING');
+    } catch (err: any) {
+      // Check for 409 Category Conflict returned by backend validator
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        const data = err.response.data;
+        setConflictData({
+          detectedGender: data.detectedGender || 'MEN',
+          detectedCategory: data.detectedCategory || 'Shirt',
+          detectedDescription: data.detectedDescription || '',
+          message: data.message || 'The detected garment does not match your selected category.',
+        });
+        setIsConflictModalOpen(true);
+        return;
+      }
+
+      const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
+      console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
+      setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleUseCapturedPhoto = async () => {
@@ -133,19 +189,23 @@ export const LiveStandeePage: React.FC = () => {
       const uploaded = await api.uploadImage(file);
       setOriginalPhotoUrl(uploaded.filePath);
 
-      // 2. Trigger OpenAI Virtual Try-On API (backend returns immediately with status PROCESSING)
-      const gen = await api.createGeneration({
-        sessionId: sessionData?.session?.id,
-        originalImagePath: uploaded.filePath,
-      });
-
-      // 3. Set generation state and transition smoothly to progress screen
-      setCurrentGeneration(gen);
-      setStep('GENERATING');
+      // 2. Trigger generation with strict category
+      await executeGeneration(uploaded.filePath, currentGender, currentCategory);
     } catch (err: any) {
+      if (err.response?.status === 409 && err.response?.data?.conflict) {
+        const data = err.response.data;
+        setConflictData({
+          detectedGender: data.detectedGender || 'MEN',
+          detectedCategory: data.detectedCategory || 'Shirt',
+          detectedDescription: data.detectedDescription || '',
+          message: data.message,
+        });
+        setIsConflictModalOpen(true);
+        return;
+      }
       const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
-      console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
-      setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
+      console.error('[TRYON Frontend] Image upload/generation failed:', serverDetails);
+      setErrorBanner(serverDetails || 'Unable to upload photo. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -156,23 +216,16 @@ export const LiveStandeePage: React.FC = () => {
       setErrorBanner('Please upload a photo from your phone first!');
       return;
     }
-    try {
-      setIsProcessing(true);
-      setErrorBanner(null);
+    await executeGeneration(originalPhotoUrl, currentGender, currentCategory);
+  };
 
-      const gen = await api.createGeneration({
-        sessionId: sessionData?.session?.id,
-        originalImagePath: originalPhotoUrl,
-      });
-
-      setCurrentGeneration(gen);
-      setStep('GENERATING');
-    } catch (err: any) {
-      const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
-      console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
-      setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
-    } finally {
-      setIsProcessing(false);
+  const handleSwitchToDetected = (newGender: FashionGender, newCat: FashionCategory) => {
+    setSelectedGender(newGender);
+    setSelectedCategory(newCat);
+    setIsConflictModalOpen(false);
+    const photoToUse = originalPhotoUrl || (capturedDataUrl ? originalPhotoUrl : null);
+    if (photoToUse) {
+      executeGeneration(photoToUse, newGender, newCat);
     }
   };
 
@@ -206,8 +259,28 @@ export const LiveStandeePage: React.FC = () => {
           </div>
         )}
 
+        {/* Active Category Indicator with Quick Change */}
+        <div className="z-30 flex items-center justify-between glass-panel px-5 py-2.5 rounded-full border border-gold-500/40 mb-3 max-w-md w-full shadow-lg">
+          <div className="flex items-center space-x-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs text-gray-300 font-bold uppercase tracking-wider">
+              Category:
+            </span>
+            <span className="text-xs font-black uppercase text-gold-300 bg-gold-500/20 px-3 py-1 rounded-full border border-gold-400/40">
+              {currentGender} &bull; {currentCategory}
+            </span>
+          </div>
+          <button
+            onClick={() => setStep('CATEGORY_SELECT')}
+            className="flex items-center space-x-1 text-xs text-gold-400 hover:text-white font-extrabold uppercase tracking-wider px-2 py-1 transition-colors"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 mr-1" />
+            <span>Change</span>
+          </button>
+        </div>
+
         {/* Mode Selector Bar */}
-        <div className="z-30 flex items-center justify-center p-2 glass-panel rounded-full border border-gold-500/30 mb-4 max-w-md w-full">
+        <div className="z-30 flex items-center justify-center p-2 glass-panel rounded-full border border-gold-500/30 mb-3 max-w-md w-full">
           <button
             onClick={() => {
               setActiveTab('CAMERA');
@@ -232,13 +305,17 @@ export const LiveStandeePage: React.FC = () => {
           </button>
         </div>
 
-        {/* Instruction Header */}
-        <div className="z-30 text-center mb-4 space-y-1">
+        {/* Dynamic Instruction Header */}
+        <div className="z-30 text-center mb-3 space-y-1">
           <h1 className="font-serif text-3xl md:text-4xl font-black gold-gradient-text uppercase tracking-wide">
-            SHOW YOUR GARMENT
+            HOLD YOUR {currentCategory.toUpperCase()}
           </h1>
           <p className="text-sm md:text-base font-semibold text-gray-200">
-            Hold any dress / saree / shirt in front of the camera
+            {currentCategory === 'Saree'
+              ? 'Hold your saree fabric below chest to capture border & color'
+              : currentCategory === 'Pant'
+              ? 'Hold your pants / trousers clearly in front of the camera'
+              : `Hold your ${currentCategory.toLowerCase()} in front of the camera below your chest`}
           </p>
         </div>
 
@@ -270,15 +347,15 @@ export const LiveStandeePage: React.FC = () => {
                   </div>
                   <div className="w-full py-2 px-3 bg-black/70 rounded-xl border border-gold-500/40">
                     <p className="text-xs uppercase tracking-wider text-gold-300 font-extrabold">
-                      Hold Garment Below Chest
+                      Hold {currentCategory} Below Chest
                     </p>
                     <p className="text-[10px] text-gray-300 mt-0.5">
-                      Step back 4-6 ft so your full face & torso are in frame
+                      Step back 4-6 ft so full face & torso are in frame
                     </p>
                   </div>
                 </div>
                 <p className="text-xs uppercase tracking-widest text-gold-300 bg-black/85 px-6 py-2 rounded-full border border-gold-500/40 font-bold shadow-lg">
-                  Ready? Stand centered & click CAPTURE PHOTO
+                  Ready? Center your body & click CAPTURE PHOTO
                 </p>
               </div>
             )}
@@ -304,7 +381,7 @@ export const LiveStandeePage: React.FC = () => {
                 lanUrl={sessionData.lanUploadUrl}
                 onRefresh={initializeSession}
                 title="Mobile Upload QR Code"
-                subtitle="Scan with your phone camera to upload a photo of yourself holding a saree/dress"
+                subtitle={`Scan to upload a photo of yourself holding a ${currentCategory}`}
               />
             ) : (
               <p className="text-gold-400 animate-pulse">Initializing mobile session...</p>
@@ -354,6 +431,26 @@ export const LiveStandeePage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Garment Conflict Modal */}
+      {conflictData && (
+        <GarmentConflictModal
+          isOpen={isConflictModalOpen}
+          selectedGender={selectedGender || 'WOMEN'}
+          selectedCategory={selectedCategory || 'Saree'}
+          detectedGender={conflictData.detectedGender}
+          detectedCategory={conflictData.detectedCategory}
+          detectedDescription={conflictData.detectedDescription}
+          message={conflictData.message}
+          onSwitchToDetected={handleSwitchToDetected}
+          onChangeCategory={() => {
+            setIsConflictModalOpen(false);
+            setStep('CATEGORY_SELECT');
+          }}
+          onRetake={handleRetake}
+          onClose={() => setIsConflictModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

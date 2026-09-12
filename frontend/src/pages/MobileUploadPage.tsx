@@ -71,7 +71,7 @@ export const MobileUploadPage: React.FC = () => {
               ) : (
                 <div className="flex flex-col items-center p-6 text-center text-gray-400">
                   <Camera className="w-12 h-12 text-gold-400 mb-3" />
-                  <span>Take a selfie or select a photo from your library</span>
+                  <span>Take a photo holding your garment (saree, dress, shirt, t-shirt, pant, or kurtha)</span>
                 </div>
               )}
             </div>

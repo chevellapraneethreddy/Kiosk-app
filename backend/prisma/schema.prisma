@@ -55,6 +55,8 @@ model Generation {
   style              Style?      @relation(fields: [styleId], references: [id], onDelete: SetNull)
   originalImagePath  String
   garmentImagePath   String?
+  gender             String?
+  category           String?
   generatedImagePath String?
   provider           String      @default("custom")
   providerJobId      String?

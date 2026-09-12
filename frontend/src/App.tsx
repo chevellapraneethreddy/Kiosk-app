@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { KioskProvider, useKiosk } from './context/KioskContext';
 import { WelcomePage } from './pages/WelcomePage';
+import { CategorySelectionPage } from './pages/CategorySelectionPage';
 import { LiveStandeePage } from './pages/LiveStandeePage';
 import { GenerationScreenPage } from './pages/GenerationScreenPage';
 import { ResultScreenPage } from './pages/ResultScreenPage';
@@ -17,6 +18,8 @@ const KioskMainView: React.FC = () => {
   switch (step) {
     case 'WELCOME':
       return <WelcomePage />;
+    case 'CATEGORY_SELECT':
+      return <CategorySelectionPage />;
     case 'LIVE_STANDEE':
       return <LiveStandeePage />;
     case 'GENERATING':

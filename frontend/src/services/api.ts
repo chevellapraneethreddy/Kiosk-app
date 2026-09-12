@@ -76,7 +76,10 @@ export const api = {
     sessionId?: string;
     experienceId?: string;
     styleId?: string;
+    gender?: string;
+    category?: string;
     originalImagePath: string;
+    garmentImagePath?: string;
     customPrompt?: string;
   }): Promise<Generation> => {
     const res = await axios.post(`${API_BASE}/generations`, data);

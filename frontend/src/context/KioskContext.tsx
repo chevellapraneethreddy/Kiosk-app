@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Experience, Style, Generation, SessionResponse, ResultResponse } from '../types';
+import { Experience, Style, Generation, SessionResponse, ResultResponse, FashionGender, FashionCategory } from '../types';
 import { api, envApiUrl, resolveMediaUrl } from '../services/api';
 
 export type KioskStep =
   | 'WELCOME'
+  | 'CATEGORY_SELECT'
   | 'LIVE_STANDEE'
   | 'EXPERIENCE'
   | 'PHOTO_INPUT'
@@ -18,6 +19,10 @@ interface KioskContextType {
   sessionData: SessionResponse | null;
   selectedExperience: Experience | null;
   setSelectedExperience: (exp: Experience | null) => void;
+  selectedGender: FashionGender | null;
+  setSelectedGender: (gender: FashionGender | null) => void;
+  selectedCategory: FashionCategory | null;
+  setSelectedCategory: (cat: FashionCategory | null) => void;
   originalPhotoUrl: string | null;
   setOriginalPhotoUrl: (url: string | null) => void;
   selectedStyle: Style | null;
@@ -39,6 +44,8 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [step, setStep] = useState<KioskStep>('WELCOME');
   const [sessionData, setSessionData] = useState<SessionResponse | null>(null);
   const [selectedExperience, setSelectedExperience] = useState<Experience | null>(null);
+  const [selectedGender, setSelectedGender] = useState<FashionGender | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<FashionCategory | null>(null);
   const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<Style | null>(null);
   const [currentGeneration, setCurrentGeneration] = useState<Generation | null>(null);
@@ -49,6 +56,8 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startNewExperience = () => {
     setStep('WELCOME');
     setSelectedExperience(null);
+    setSelectedGender(null);
+    setSelectedCategory(null);
     setOriginalPhotoUrl(null);
     setSelectedStyle(null);
     setCurrentGeneration(null);
@@ -156,6 +165,10 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         sessionData,
         selectedExperience,
         setSelectedExperience,
+        selectedGender,
+        setSelectedGender,
+        selectedCategory,
+        setSelectedCategory,
         originalPhotoUrl,
         setOriginalPhotoUrl,
         selectedStyle,

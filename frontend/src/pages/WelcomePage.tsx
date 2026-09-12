@@ -10,7 +10,7 @@ export const WelcomePage: React.FC = () => {
 
   const handleStart = async () => {
     await initializeSession();
-    setStep('LIVE_STANDEE');
+    setStep('CATEGORY_SELECT');
   };
 
   return (
@@ -22,7 +22,7 @@ export const WelcomePage: React.FC = () => {
       {/* Header Badge */}
       <div className="mt-8 flex items-center space-x-2 px-6 py-2 rounded-full glass-panel border border-gold-500/30 text-gold-300 text-sm tracking-widest uppercase font-semibold">
         <Sparkles className="w-5 h-5 text-gold-400 animate-spin-slow" />
-        <span>Physical Saree / Dress AI Virtual Try-On Standee</span>
+        <span>Men & Women AI Virtual Try-On Standee</span>
       </div>
 
       {/* Center Welcome Hero Title */}
@@ -36,7 +36,7 @@ export const WelcomePage: React.FC = () => {
         </h1>
 
         <p className="text-xl md:text-2xl font-medium text-gray-200 tracking-wide mb-12 max-w-2xl">
-          Hold your saree or dress in front of the camera and see yourself wearing it in real-time AI output!
+          Hold your saree, dress, shirt, t-shirt, kurtha or pants in front of the camera and see yourself wearing it in real-time AI output!
         </p>
 
         {/* Large Touchscreen CTA */}

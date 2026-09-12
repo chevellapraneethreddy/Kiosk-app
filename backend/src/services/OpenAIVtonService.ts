@@ -11,6 +11,7 @@ export interface OpenAITryOnInput {
   generationId: string;
   userImagePath: string;
   garmentImagePath?: string;
+  gender?: string;
   category?: string;
   description?: string;
   prompt?: string;
@@ -26,12 +27,18 @@ export interface OpenAITryOnOutput {
 
 /**
  * Builds the dynamic prompt tailored for OpenAI Image Editing (gpt-image-2)
- * Fully supports shirts, t-shirts, ladies dresses, pants/trousers for men, sarees, and suits.
+ * Strictly adheres to user priority:
+ * 1. Selected gender/category
+ * 2. Physical garment shown by the customer
+ * 3. Exact garment appearance
+ * 4. Same person/identity
+ * 5. Correct body placement
  */
-export function buildOpenAITryOnPrompt(category: string, description?: string, customPrompt?: string): string {
+export function buildOpenAITryOnPrompt(category: string, description?: string, customPrompt?: string, gender?: string): string {
   if (customPrompt) return customPrompt;
 
   const catLower = (category || 'garment').toLowerCase();
+  const selectedGender = (gender || (catLower.includes('saree') || catLower.includes('dress') ? 'WOMEN' : 'MEN')).toUpperCase();
 
   // Clean description of redundant holding/folding words so it describes the worn garment cleanly
   const cleanDescText = (description || '').trim()
@@ -43,118 +50,144 @@ export function buildOpenAITryOnPrompt(category: string, description?: string, c
 
   let garmentSpecificInstruction = '';
   let framingInstruction = '';
+  let strictNegativeRule = '';
 
   if (catLower.includes('saree') || catLower.includes('sari')) {
-    garmentSpecificInstruction = `The reference garment is a traditional Indian saree${desc} with a matching blouse.
-The person in the photograph must be realistically dressed in this exact saree from shoulders all the way down to the feet/ankles:
-1. MATCHING BLOUSE: A fitted tailored blouse in the exact same color and fabric as the saree, with short sleeves (ending just above the elbow) featuring matching zari/borders on the sleeve cuffs, with a neat modest neckline.
-2. PALLU DRAPE: The ornate pallu (decorative fabric end) of the saree is gracefully draped diagonally across the chest from the right waist up over the left shoulder, with the zari borders and pallu pattern prominently visible across the torso and flowing down the left side and back.
-3. WAIST & FRONT PLEATS: The saree is neatly wrapped around the waist, with crisp, elegant vertical accordion pleats tucked securely at the center of the waist, flowing straight down the center to the floor.
-4. FULL-LENGTH SKIRT DRAPE: The saree skirt drapes gracefully around the lower body and legs all the way down to the ankles and feet, touching the floor, exactly like a traditional Indian saree look in a premium fashion standee / showroom.
-5. ARMS & HANDS: Both arms must be relaxed and hanging naturally beside the hips with empty, natural hands at the sides. No hands holding cloth, no bunched fabric in front of the body.
-6. EXACT FABRIC & ZARI BORDERS: Preserve the exact color shades, sheen, silk/cotton texture, golden zari borders, and motifs of the reference saree throughout the entire garment.`;
-    framingInstruction = `FULL-LENGTH TOP-TO-BOTTOM PORTRAIT (HEAD TO ANKLES):
-The framing MUST show the complete person TOP TO BOTTOM, from the top of the head down to the feet/ankles, exactly like a vertical digital fashion standee or showroom smart mirror.
-The full head, hair, face, and smile must be clearly positioned in the upper portion of the frame with headroom above, and the entire saree skirt and pleats must cascade all the way down to the bottom of the frame. Do NOT cut off at the waist, thighs, or knees.`;
-  } else if (catLower.includes('pant') || catLower.includes('trouser') || catLower.includes('jean') || catLower.includes('bottom') || catLower.includes('chino') || catLower.includes('slack')) {
-    garmentSpecificInstruction = `The reference garment is a pair of ${catLower}${desc}.
-Replace the lower-body clothing on the person's body with these EXACT pants/trousers/jeans (tailored cut for men or women):
-1. WAISTBAND & POCKETS: Fitted cleanly at the natural waistline with waistband, belt loops, front fly, and tailored side/back pockets.
-2. FULL LEG LENGTH DOWN TO SHOES: The pants must drape naturally and extend all the way down along both legs to the ankles and shoes, showing authentic fabric folds, creases, and hem.
-3. COMPLEMENTARY TOP: The person should be wearing a clean, neat neutral top (such as a crisp plain white or black fitted t-shirt or shirt) tucked in or resting neatly above the waistband to showcase the trousers.
-4. ARMS & POSTURE: Both legs standing naturally and upright. Both arms relaxed beside the hips with empty, natural hands. No hands holding cloth.
-5. PRESERVE FABRIC & COLOR: Retain the exact fabric wash, color shades, denim texture, weave, and stitching from the reference pants.`;
-    framingInstruction = `FULL-LENGTH TOP-TO-BOTTOM PORTRAIT (HEAD TO SHOES):
-Outpaint and expand the framing downwards into a complete full-length vertical fashion photograph showing the complete person TOP TO BOTTOM, from head down to shoes. Both legs and the entire pair of pants must be fully displayed in the frame.`;
-  } else if (catLower.includes('dress') || catLower.includes('gown') || catLower.includes('frock') || catLower.includes('kurti') || catLower.includes('anarkali') || catLower.includes('maxi')) {
-    garmentSpecificInstruction = `The reference garment is an elegant ladies dress/kurti${desc}.
-Replace the clothing on the person's body with this EXACT dress/kurti:
-1. FIT & SILHOUETTE: Realistically tailored and fitted from the neckline and shoulders, over the bust and waist, flowing gracefully along the hips and legs down to the hemline (mid-calf, ankle, or floor length).
-2. DETAILS & CUT: Preserve all prints, embroidery, neckline style, and sleeve length from the reference garment.
-3. ARMS & HANDS: Both arms relaxed and hanging naturally beside the hips with empty hands. No hands holding fabric in front of the body.
-4. PRESERVE FABRIC & COLOR: Retain the exact fabric colors, prints, embroidery, and textures from the reference dress.`;
+    // WOMEN + SAREE
+    garmentSpecificInstruction = `SELECTED CATEGORY: WOMEN + SAREE
+The reference garment is a traditional Indian saree${desc} with a matching blouse.
+The woman in the photograph must appear naturally wearing this SAME saree shown to the camera:
+1. PRESERVE SAREE DETAILS: Preserve the exact saree color, gold/zari border, pattern, silk/cotton fabric, and design shown in the reference.
+2. NATURAL SAREE DRAPING:
+   - MATCHING BLOUSE: Fitted tailored blouse in the exact same color and fabric as the saree, with neat modest sleeves featuring matching zari/borders.
+   - PALLU DRAPE: The ornate pallu (decorative fabric end) is gracefully draped diagonally across the chest from the right waist up over the left shoulder, with the border and pallu pattern prominently visible across the torso and flowing down the left side and back.
+   - WAIST & FRONT PLEATS: Neatly wrapped around the waist, with crisp, elegant vertical accordion pleats tucked securely at the center of the waist, flowing straight down the center to the floor.
+   - FULL-LENGTH SKIRT DRAPE: The saree skirt drapes gracefully around the lower body all the way down to the ankles and feet, touching the floor.
+3. ARMS & HANDS: Both arms must be relaxed and hanging naturally beside the hips with empty, natural hands at the sides. Do NOT show the woman holding the saree after generation. Completely remove the folded cloth from hands.`;
+
+    strictNegativeRule = `STRICT SAREE NEGATIVE CONSTRAINTS:
+- Do NOT turn the saree into a shirt, dress, pants, or any men's clothing.
+- Do NOT change the saree into another design or color.
+- Do NOT show the woman holding the saree after generation.
+- Never place trousers or jeans under the saree.
+- Never make it into western clothing.`;
+
+    framingInstruction = `FULL-BODY / 3/4-BODY REALISTIC FASHION STANDEE PORTRAIT:
+Framing MUST show the complete woman, from the top of the head down to the feet/ankles, exactly like a vertical digital fashion standee or showroom smart mirror. Full head, hair, face, and smile clearly positioned in the upper frame with headroom above, and the entire saree skirt and pleats cascading down to the floor.`;
+  } else if (catLower.includes('dress') || catLower.includes('gown') || catLower.includes('frock') || catLower.includes('kurti')) {
+    // WOMEN + DRESS
+    garmentSpecificInstruction = `SELECTED CATEGORY: WOMEN + DRESS
+The reference garment is an elegant dress${desc}.
+The woman in the photograph must appear naturally wearing the SAME dress shown to the camera:
+1. PRESERVE EXACT DRESS: Preserve the exact color, pattern, fabric, prints, embroidery, neckline, and design from the reference garment.
+2. FIT & SILHOUETTE: Realistically tailored and fitted from the neckline and shoulders, over the bust and waist, flowing gracefully along the hips and legs down to the hemline.
+3. ARMS & HANDS: Both arms relaxed and hanging naturally beside the hips with empty hands. No hands holding fabric in front of the body.`;
+
+    strictNegativeRule = `STRICT DRESS NEGATIVE CONSTRAINTS:
+- Do NOT generate a saree, shirt, T-shirt or pants.
+- Do NOT turn the dress into men's clothing.
+- Do NOT change the dress fabric, pattern, or color.
+- Do NOT show the woman holding the dress.`;
+
     framingInstruction = `FULL-LENGTH TOP-TO-BOTTOM PORTRAIT:
-Outpaint and expand the framing downwards into a full-length vertical fashion portrait showing the person from the top of the head down to the hemline and shoes/feet. Head and hair 100% in-frame with headroom above.`;
+Framing must show the complete woman from top of the head down to the hemline and shoes/feet. Head and hair 100% in-frame with headroom above.`;
+  } else if (catLower.includes('kurtha') || catLower.includes('kurta')) {
+    // MEN + KURTHA
+    garmentSpecificInstruction = `SELECTED CATEGORY: MEN + KURTHA
+The reference garment is a traditional Indian men's kurtha${desc}.
+Generate the same man naturally wearing the SAME kurtha shown to the camera:
+1. PRESERVE EXACT KURTHA: Preserve the exact fabric, color shades, ethnic motifs/embroidery, buttons, and neckline from the reference garment.
+2. TAILORING & FIT: Classic long kurtha tunic extending down past the hips and thighs to the knees, with a crisp mandarin/nehru collar, front buttoned placket, and tailored sleeves.
+3. COMPLEMENTARY BOTTOM: Paired cleanly with neutral ethnic trousers/churidar/pajama below the knee.
+4. ARMS & HANDS: Both arms relaxed beside the hips with empty, natural hands. Completely remove any held or folded fabric in front of the chest.`;
+
+    strictNegativeRule = `STRICT KURTHA NEGATIVE CONSTRAINTS:
+- Do NOT turn it into a shirt, T-shirt, saree or dress.
+- Do NOT generate women's clothing or western tops.
+- Do NOT put the kurtha pattern on the pants/legs.
+- Do NOT show the man holding the kurtha.`;
+
+    framingInstruction = `FULL-BODY FASHION PORTRAIT (HEAD TO SHOES):
+Full-length fashion portrait showing the complete man from head down past knees to shoes. Complete head, face, beard, and hair 100% in frame with headroom above.`;
   } else if (catLower.includes('t-shirt') || catLower.includes('tshirt') || catLower.includes('tee')) {
-    const cleanDesc = (cleanDescText || 't-shirt').replace(/trousers?|pants?|jeans?/gi, 't-shirt');
-    garmentSpecificInstruction = `The reference garment is a ${cleanDesc}.
+    // MEN + T-SHIRT
+    garmentSpecificInstruction = `SELECTED CATEGORY: MEN + T-SHIRT
+The reference garment is a men's t-shirt${desc}.
+Generate the same man naturally wearing the SAME T-shirt shown to the camera:
+1. PRESERVE EXACT T-SHIRT: Preserve the exact fabric, uniform color, crewneck/v-neck, and any graphic/texture from the reference t-shirt.
+2. 100% FULL REPLACEMENT: The man's previous worn top must be entirely replaced. Every part of the new t-shirt — collar, both sleeves, shoulders, chest, torso, and bottom hem — must be made of this reference fabric.
+3. TORSO COVERAGE: Covers the upper body from shoulders down to the waistband and belt.
+4. ARMS & HANDS: Both arms hanging down naturally beside the hips with relaxed, empty hands. No hands holding fabric in front of the chest.
+5. UPPER-BODY ONLY: Reference garment is strictly an upper-body t-shirt. Lower body pants must remain separate and neutral.`;
 
-CRITICAL: 100% FULL T-SHIRT REPLACEMENT (NO HYBRID BLEND WITH OLD CLOTHING):
-1. COMPLETELY REMOVE THE PREVIOUS CLOTHING:
-The person's original dark polo shirt, collar, sleeves, stripes, and fabric MUST BE 100% ENTIRELY REMOVED AND REPLACED.
-Do NOT retain the old collar. Do NOT retain the old striped sleeves. Do NOT keep any black polo fabric.
+    strictNegativeRule = `STRICT T-SHIRT NEGATIVE CONSTRAINTS:
+- Do NOT turn it into a collared shirt, saree, dress, or kurtha.
+- Do NOT put the t-shirt pattern on the pants/legs.
+- Do NOT create a hybrid or colorblock with previous worn clothes.
+- Do NOT show the man holding cloth.`;
 
-2. WEAR THE FULL NEW T-SHIRT:
-Dress the person in a COMPLETE, UNIFORM ${cleanDesc}.
-Every single part of the new t-shirt — the collar/crewneck, both sleeves, both shoulders, chest, stomach, and bottom hem — MUST be made 100% of this reference fabric and uniform color (${cleanDesc}).
-Do NOT retain or blend any parts, colors, collar, or stripes from the old worn shirt.
-
-3. FULL TORSO COVERAGE:
-The t-shirt must cover the entire upper body from shoulders all the way down to the bottom hem, waistband, and belt. Never cut off at the shoulders or chest.
-
-4. ARMS & HANDS:
-Both arms hanging down naturally beside the hips with relaxed, empty hands. No hands holding fabric in front of the chest.
-
-5. UPPER-BODY ONLY:
-The reference garment is strictly an upper-body t-shirt. The lower-body pants must remain neutral/dark.`;
     framingInstruction = `WAIST-UP / MID-THIGH FASHION PORTRAIT:
-Framing must show the complete person from the top of the hair down past the waistline, hips, and belt. Head and hair 100% in-frame with headroom above. The full t-shirt must be visible down to the bottom hem. Do NOT extend all the way down to shoes when trying on a t-shirt.`;
-  } else if (catLower.includes('shirt') || catLower.includes('top') || catLower.includes('blouse')) {
-    const cleanDesc = (cleanDescText || 'shirt').replace(/trousers?|pants?|jeans?/gi, 'shirt');
-    garmentSpecificInstruction = `The reference garment is a ${cleanDesc}.
+Framing must show the complete man from top of hair down past the waistline and belt. Head and face 100% in-frame with headroom above. The full t-shirt must be visible down to the bottom hem.`;
+  } else if (catLower.includes('pant') || catLower.includes('trouser') || catLower.includes('jean') || catLower.includes('bottom') || catLower.includes('chino') || catLower.includes('slack')) {
+    // MEN + PANT
+    garmentSpecificInstruction = `SELECTED CATEGORY: MEN + PANT
+The reference garment is a pair of men's pants/trousers/jeans${desc}.
+Generate the same man naturally wearing the SAME pants shown to the camera:
+1. PRESERVE EXACT PANTS: Preserve the exact denim/chino fabric wash, color shades, texture, pockets, and stitching from the reference pants.
+2. LOWER-BODY FIT: Fitted cleanly at the natural waistline with waistband, belt loops, front fly, and tailored side pockets, extending down along both legs to the shoes.
+3. COMPLEMENTARY TOP: The man should be wearing a clean neutral top (such as a crisp plain white or black top) tucked in or resting above the waistband to showcase the trousers.
+4. ARMS & HANDS: Both legs standing naturally upright. Both arms relaxed beside the hips with empty hands. No hands holding cloth.
+5. LOWER-BODY ONLY: Do NOT put the pant design on the shirt or upper body. Upper and lower body must remain strictly separate.`;
 
-CRITICAL: 100% FULL SHIRT REPLACEMENT (NO HYBRID OR COLORBLOCK):
-1. COMPLETELY REMOVE THE PREVIOUS SHIRT:
-The person's original dark/black polo shirt, horizontal striped sleeves, and polo collar MUST BE 100% ENTIRELY REMOVED AND REPLACED.
-Do NOT retain the old collar. Do NOT retain the old striped sleeves. Do NOT retain the old dark polo fabric. Do NOT create a two-tone or colorblock shirt.
+    strictNegativeRule = `STRICT PANT NEGATIVE CONSTRAINTS:
+- Do NOT put the pant design on the shirt/upper body.
+- Do NOT generate a saree or dress.
+- Do NOT turn pants into shorts or a skirt.
+- Do NOT show the man holding pants.`;
 
-2. WEAR THE FULL NEW SHIRT:
-Dress the person in a COMPLETE, UNIFORM ${cleanDesc}.
-Every single part of the new shirt — the entire collar, both full sleeves (from shoulder seam down to cuffs), front placket with buttons, chest, stomach, and bottom hem — MUST be made 100% of this reference fabric and uniform color (${cleanDesc}).
-If the reference garment is pink, the ENTIRE shirt is 100% pink throughout from collar to cuffs to waist!
-
-3. FIT & TAILORING:
-The shirt must be tailored to fit the person's body naturally and impeccably (masculine tailored cut for men, feminine tailored cut for women), buttoned up cleanly with a crisp collar, sleeves, chest, and stomach.
-
-4. FULL LENGTH DOWN TO WAIST & HIPS:
-Show the ENTIRE shirt from collar down to the bottom hem, resting naturally at the waistline, hips, and belt. It must never be cut off at the chest or shoulders.
-
-5. ARMS & HANDS:
-Both arms must be relaxed and hanging naturally beside the hips with empty, natural hands at the sides. Completely remove the folded garment from the person's hands and remove any hands/arms clutched in front of the chest.
-
-6. UPPER-BODY ONLY:
-The reference garment is strictly an upper-body shirt. Do NOT put this fabric or color onto the person's pants/trousers/legs. The lower body (pants) must remain simple, dark/neutral, and separate.`;
-    framingInstruction = `WAIST-UP / MID-THIGH FASHION PORTRAIT:
-Framing must be a clean, premium fashion portrait showing the person from the top of their hair down to the waistline, hips, and belt. The complete head and hair must be 100% visible with headroom at the top. The entire shirt down to its bottom hem must be fully in frame. Do NOT extend all the way down to shoes when trying on a shirt.`;
-  } else if (catLower.includes('suit') || catLower.includes('blazer') || catLower.includes('jacket') || catLower.includes('coat') || catLower.includes('tuxedo')) {
-    garmentSpecificInstruction = `The reference garment is a tailored ${catLower}${desc}.
-Replace the clothing with this tailored suit/blazer:
-1. TAILORING & FIT: Sharp structured shoulders, crisp lapels, buttoned front, matching trousers, and clean formal shirt/blouse underneath (tailored for men or women).
-2. FULL LENGTH: Jacket extending past hips and trousers extending down both legs to formal shoes.
-3. ARMS & HANDS: Both arms relaxed beside the hips with empty, natural hands.
-4. PRESERVE FABRIC: Retain exact suit fabric, color, pinstripes, or texture from the reference.`;
-    framingInstruction = `FULL-BODY FASHION PORTRAIT:
-Outpaint and expand the framing downwards into a full-length fashion portrait showing the complete suit jacket down past the hips and trousers down to the shoes. Complete head and hair fully visible.`;
+    framingInstruction = `FULL-LENGTH TOP-TO-BOTTOM PORTRAIT (HEAD TO SHOES):
+Full-length fashion portrait showing the complete man from head down along both legs to shoes. Both legs and entire pair of pants fully in frame.`;
   } else {
-    garmentSpecificInstruction = `The reference garment is a ${catLower}${desc}. Make the garment neatly fitted and worn on the person's body showing its complete cut from top to bottom hem. Both arms resting naturally beside the hips with empty hands.`;
-    framingInstruction = `COMPLETE FASHION PORTRAIT:
-Outpaint and expand the framing downwards into a complete fashion portrait showing the entire garment down to its bottom edge. Complete head and hair fully visible with headroom at the top.`;
+    // MEN + SHIRT
+    garmentSpecificInstruction = `SELECTED CATEGORY: MEN + SHIRT
+The reference garment is a men's button-up shirt${desc}.
+Generate the same man naturally wearing the SAME shirt shown to the camera:
+1. PRESERVE EXACT SHIRT: Preserve the exact color, checks/stripes/pattern, fabric weave, collar style, and buttons from the reference shirt.
+2. 100% FULL REPLACEMENT: The man's previous worn top must be entirely replaced. Every part of the new shirt — crisp collar, both full sleeves down to cuffs, front button placket, chest, stomach, and bottom hem — must be made 100% of this reference fabric.
+3. TAILORING & FIT: Masculine tailored fit, buttoned up cleanly, resting naturally at the waistline, hips, and belt.
+4. ARMS & HANDS: Both arms relaxed and hanging naturally beside the hips with empty, natural hands at the sides. Completely remove any held or folded garment from hands.
+5. UPPER-BODY ONLY: The reference garment is strictly an upper-body shirt. Do NOT put the shirt pattern on pants or legs. The pants must remain neutral, dark, and separate.`;
+
+    strictNegativeRule = `STRICT SHIRT NEGATIVE CONSTRAINTS:
+- Do NOT put the shirt pattern on pants/legs.
+- Do NOT generate a saree or dress.
+- Do NOT turn it into a t-shirt or kurtha.
+- Do NOT show the man holding cloth.`;
+
+    framingInstruction = `WAIST-UP / MID-THIGH FASHION PORTRAIT:
+Framing must be a clean, premium fashion portrait showing the man from top of hair down to the waistline, hips, and belt. Complete head, face, glasses (if worn), and hair 100% in-frame with headroom above. The entire shirt down to its bottom hem must be fully visible.`;
   }
 
-  return `Edit the provided photograph of this same person.
+  return `AI VIRTUAL TRY-ON PRIORITY RULES:
+1. SELECTED CATEGORY & GENDER: ${selectedGender} • ${category.toUpperCase()}. This selected category is the absolute authority and strictly controls the AI generation.
+2. PHYSICAL GARMENT: The physical garment shown by the customer in the reference image is the primary visual source of truth.
+3. EXACT GARMENT APPEARANCE: Faithfully reproduce the reference garment's exact colors, shades, prints, embroidery, textures, zari borders, checks/stripes, and construction details.
+4. IDENTITY & FACE PRESERVATION: Flawlessly preserve this exact person's identity, facial features, eyeglasses/glasses if worn, beard/mustache (for men), bindi/earrings (for women), skin tone, hairstyle, and facial expression. Never substitute with another person.
+5. NATURAL BODY PLACEMENT & DRAPE: Garment is worn realistically with organic textile folds, weight, and authentic draping. Both arms relaxed and hanging straight down naturally beside hips with empty, natural hands at the sides. Zero hands holding or clutching cloth.
 
-CRITICAL IDENTITY & FACE PRESERVATION (MEN & WOMEN):
-Preserve this exact person's identity, facial features, eyeglasses/glasses if worn, beard and mustache (for men), bindi/earrings (for women), skin tone, hairstyle, and facial expression. The complete head, hair, forehead, glasses, eyes, nose, and mouth must be 100% visible, fully in frame, and razor sharp in high definition. Do NOT crop, alter, modify, or remove the head, hair, or glasses. Never substitute with another person.
-
-CRITICAL GARMENT, COLOR & PATTERN:
-The reference garment is the absolute source of truth. Preserve its exact colors, shades, prints, embroidery, textures, zari borders, checks/stripes, and construction details. The person on the photo MUST be wearing this EXACT garment. Do NOT make the garment plain, grey, white, or a different color. Preserve all vibrant colors, patterns, and fabric weave from the reference garment.
-
-CRITICAL FRAMING & COVERAGE:
-${framingInstruction}
+CRITICAL INSTRUCTIONS:
 ${garmentSpecificInstruction}
 
-NATURAL POSE & NO HELD CLOTH:
-Make the garment naturally and realistically worn on the person's body. Completely remove the garment from the person's hands and remove any hands/arms/fingers holding or clutching it in front of the body. Keep both arms relaxed and hanging naturally beside the hips with empty, natural hands. Do not create a different person. Create a premium photorealistic fashion photograph. Authentic room background preserved.`;
+${strictNegativeRule}
+
+FRAMING REQUIREMENTS:
+${framingInstruction}
+
+FINAL POLISH & IMAGE EXCELLENCE:
+- Commercial fashion magazine editorial quality, shot on 100MP medium-format camera with soft studio lighting.
+- Realistic textile micro-textures, authentic silk sheen, crisp embroidery, and natural fabric shadows.
+- Lifelike skin texture with natural pores, sharp eyes, and razor-sharp facial details (zero AI blurring, zero plastic skin, zero extra fingers/limbs).
+- Seamless room background preservation with authentic depth of field.`;
 }
 
 export class OpenAIVtonService {
@@ -164,7 +197,7 @@ export class OpenAIVtonService {
 
   constructor() {
     this.apiKey = config.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
-    this.model = config.OPENAI_IMAGE_MODEL || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1-mini';
+    this.model = config.OPENAI_IMAGE_MODEL || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
 
     const configured = !!this.apiKey;
     logger.info(`[OPENAI] OPENAI_API_KEY configured: ${configured}, Model: ${this.model}`);
@@ -191,24 +224,28 @@ export class OpenAIVtonService {
 
     let finalGarmentPath = input.garmentImagePath;
     let garmentCategory = input.category || 'shirt';
+    let garmentGender = input.gender || (garmentCategory.toLowerCase().includes('saree') || garmentCategory.toLowerCase().includes('dress') ? 'WOMEN' : 'MEN');
     let garmentDescription = input.description || '';
 
-    // 1. If garment image is not explicitly separate from person photo, or if description is missing, extract
+    // If garment image is not explicitly separate from person photo, or if description is missing, extract
     if (
       !finalGarmentPath ||
       !fs.existsSync(finalGarmentPath) ||
       path.resolve(finalGarmentPath) === path.resolve(input.userImagePath) ||
       !garmentDescription
     ) {
-      logger.info('[OPENAI] Extracting held garment info and description from captured photo...');
+      logger.info(`[OPENAI] Extracting held garment info for selected category: ${garmentGender} • ${garmentCategory}...`);
       if (input.onProgress) input.onProgress(20, 'Detecting and preparing your garment...');
       const garmentInfo: ExtractedGarmentResult = await garmentExtractionService.extractGarmentInfo(
-        input.userImagePath
+        input.userImagePath,
+        input.category,
+        input.gender
       );
       if (!finalGarmentPath || !fs.existsSync(finalGarmentPath) || path.resolve(finalGarmentPath) === path.resolve(input.userImagePath)) {
         finalGarmentPath = path.resolve(__dirname, '../../..', garmentInfo.garmentPath.replace(/^\//, ''));
       }
-      if (!input.category || input.category === 'shirt') {
+      // CRITICAL: NEVER overwrite user selected category!
+      if (!input.category) {
         garmentCategory = garmentInfo.category;
       }
       if (!garmentDescription) {
@@ -238,14 +275,16 @@ export class OpenAIVtonService {
       catLower.includes('frock') ||
       catLower.includes('saree') ||
       catLower.includes('sari') ||
+      catLower.includes('kurtha') ||
+      catLower.includes('kurta') ||
       catLower.includes('suit') ||
       catLower.includes('blazer') ||
       catLower.includes('tuxedo') ||
       catLower.includes('lehenga') ||
       catLower.includes('skirt');
 
-    const promptToUse = buildOpenAITryOnPrompt(garmentCategory, garmentDescription, input.prompt);
-    logger.info(`[OPENAI] Virtual try-on prompt (${garmentCategory}, fullBody=${isFullBodyGarment}): ${promptToUse}`);
+    const promptToUse = buildOpenAITryOnPrompt(garmentCategory, garmentDescription, input.prompt, garmentGender);
+    logger.info(`[OPENAI] Virtual try-on prompt (${garmentGender} • ${garmentCategory}, fullBody=${isFullBodyGarment}):\n${promptToUse}`);
 
     try {
       if (input.onProgress) input.onProgress(35, 'Preparing framing for full garment coverage...');

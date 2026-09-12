@@ -12,7 +12,17 @@ import { logger } from '../utils/logger';
 export async function createGeneration(req: Request, res: Response) {
   let generationId: string | null = null;
   try {
-    const { sessionId, experienceId, styleId, originalImagePath, garmentImagePath, category, customPrompt } = req.body;
+    const {
+      sessionId,
+      experienceId,
+      styleId,
+      originalImagePath,
+      garmentImagePath,
+      gender,
+      category,
+      customPrompt,
+      force,
+    } = req.body;
 
     if (!originalImagePath) {
       return res.status(400).json({
@@ -39,6 +49,34 @@ export async function createGeneration(req: Request, res: Response) {
       });
     }
 
+    // PRE-GENERATION CONFLICT VALIDATION:
+    // If the selected category and detected garment type conflict, stop generation immediately!
+    if (category) {
+      logger.info(`[VALIDATION] Validating garment photo against selected category: ${gender || 'WOMEN'} • ${category}`);
+      const validation = await garmentExtractionService.validateGarmentAgainstCategory(
+        fullUserImgPath,
+        gender,
+        category
+      );
+
+      if (!validation.valid && validation.conflict && !force) {
+        logger.warn(
+          `[VALIDATION] Conflict detected! Selected (${gender} • ${category}) vs Detected (${validation.detectedGender} • ${validation.detectedCategory}). Halting generation.`
+        );
+        return res.status(409).json({
+          success: false,
+          conflict: true,
+          selectedGender: gender,
+          selectedCategory: category,
+          detectedGender: validation.detectedGender,
+          detectedCategory: validation.detectedCategory,
+          detectedDescription: validation.detectedDescription,
+          message: validation.message,
+          error: 'Garment category conflict',
+        });
+      }
+    }
+
     // 1. Resolve garment image: check if provided or needs automatic extraction
     let finalGarmentRelativePath = garmentImagePath;
     if (finalGarmentRelativePath && (finalGarmentRelativePath.startsWith('http://') || finalGarmentRelativePath.startsWith('https://'))) {
@@ -54,8 +92,12 @@ export async function createGeneration(req: Request, res: Response) {
     let extractedDescription: string | undefined = undefined;
 
     if (!fullGarmentPath || !fs.existsSync(fullGarmentPath) || path.resolve(fullGarmentPath) === path.resolve(fullUserImgPath)) {
-      logger.info('[OPENAI] Extracting held garment from captured camera photo...');
-      const garmentInfo = await garmentExtractionService.extractGarmentInfo(fullUserImgPath);
+      logger.info(`[OPENAI] Extracting held garment for category: ${category || 'auto'}...`);
+      const garmentInfo = await garmentExtractionService.extractGarmentInfo(
+        fullUserImgPath,
+        category,
+        gender
+      );
       finalGarmentRelativePath = garmentInfo.garmentPath;
       fullGarmentPath = path.resolve(__dirname, '../../..', finalGarmentRelativePath.replace(/^\//, ''));
       extractedPrompt = garmentInfo.recommendedPrompt;
@@ -101,10 +143,15 @@ export async function createGeneration(req: Request, res: Response) {
     const publicToken = uuidv4().replace(/-/g, '').substring(0, 16);
     const expiresAt = new Date(Date.now() + (config.DEFAULT_CLEANUP_HOURS || 24) * 60 * 60 * 1000);
 
+    const effectiveGender = gender || (category === 'Saree' || category === 'Dress' ? 'WOMEN' : 'MEN');
+    const effectiveCategory = category || extractedCategory || 'Shirt';
+
     const generationData: any = {
       publicToken,
       originalImagePath,
       garmentImagePath: finalGarmentRelativePath,
+      gender: effectiveGender,
+      category: effectiveCategory,
       provider: 'openai',
       status: 'PROCESSING',
       progress: 15,
@@ -124,16 +171,15 @@ export async function createGeneration(req: Request, res: Response) {
     res.status(201).json(generation);
 
     // Asynchronously process virtual try-on via OpenAI gpt-image-2 in background
-    const effectiveCategory = category || extractedCategory || 'shirt';
-
     (async () => {
       try {
-        logger.info(`[OPENAI] Background try-on started for generation ${generation.id} (Category: ${effectiveCategory})`);
+        logger.info(`[OPENAI] Background try-on started for generation ${generation.id} (${effectiveGender} • ${effectiveCategory})`);
 
         const aiOutput = await openAiVtonService.processTryOn({
           generationId: generation.id,
           userImagePath: fullUserImgPath,
           garmentImagePath: fullGarmentPath || undefined,
+          gender: effectiveGender,
           category: effectiveCategory,
           description: extractedDescription,
           prompt: customPrompt || undefined,

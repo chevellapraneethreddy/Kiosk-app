@@ -24,12 +24,17 @@ export interface Style {
   order: number;
 }
 
+export type FashionGender = 'MEN' | 'WOMEN';
+export type FashionCategory = 'Shirt' | 'T-Shirt' | 'Pant' | 'Kurtha' | 'Saree' | 'Dress';
+
 export interface Generation {
   id: string;
   publicToken: string;
   sessionId?: string;
   experienceId?: string;
   styleId?: string;
+  gender?: FashionGender;
+  category?: FashionCategory;
   originalImagePath: string;
   garmentImagePath?: string;
   generatedImagePath?: string;
