@@ -7,6 +7,7 @@ export interface StorageProvider {
   saveFile(sourcePathOrBuffer: string | Buffer, targetFilename: string, subfolder: 'uploads' | 'generated'): Promise<string>;
   deleteFile(relativeFilePath: string): Promise<boolean>;
   getPublicUrl(relativeFilePath: string): string;
+  getStorageDir(subfolder: 'uploads' | 'generated'): string;
 }
 
 class LocalStorageProvider implements StorageProvider {
@@ -19,6 +20,10 @@ class LocalStorageProvider implements StorageProvider {
 
     if (!fs.existsSync(this.uploadsDir)) fs.mkdirSync(this.uploadsDir, { recursive: true });
     if (!fs.existsSync(this.generatedDir)) fs.mkdirSync(this.generatedDir, { recursive: true });
+  }
+
+  getStorageDir(subfolder: 'uploads' | 'generated'): string {
+    return subfolder === 'uploads' ? this.uploadsDir : this.generatedDir;
   }
 
   async saveFile(sourcePathOrBuffer: string | Buffer, targetFilename: string, subfolder: 'uploads' | 'generated'): Promise<string> {

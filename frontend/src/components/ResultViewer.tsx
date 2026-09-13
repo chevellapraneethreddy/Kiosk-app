@@ -64,6 +64,8 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({
         <img
           src={generatedImageUrl}
           alt="AI Digital Fashion Mirror Look"
+          loading="eager"
+          decoding="sync"
           className="w-full h-full max-w-full max-h-full pointer-events-none drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] select-none"
           style={{ objectFit: 'contain' }}
         />

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Sparkles, Camera, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
+import { optimizeImageFile } from '../utils/imageOptimizer';
 
 export const MobileUploadPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -26,7 +27,9 @@ export const MobileUploadPage: React.FC = () => {
     try {
       setIsUploading(true);
       setErrorMsg(null);
-      await api.mobileUploadPhoto(token, selectedFile);
+      // Fast client-side optimization (1440px max, 0.88 JPEG, strips heavy mobile metadata)
+      const fileToUpload = await optimizeImageFile(selectedFile, { maxDimension: 1440, quality: 0.88 });
+      await api.mobileUploadPhoto(token, fileToUpload);
       setIsSuccess(true);
     } catch (err: any) {
       setErrorMsg(err?.response?.data?.error || err.message || 'Mobile photo upload failed.');

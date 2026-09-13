@@ -92,7 +92,7 @@ export async function createGeneration(req: Request, res: Response) {
     let extractedDescription: string | undefined = undefined;
 
     if (!fullGarmentPath || !fs.existsSync(fullGarmentPath) || path.resolve(fullGarmentPath) === path.resolve(fullUserImgPath)) {
-      logger.info(`[OPENAI] Extracting held garment for category: ${category || 'auto'}...`);
+      logger.info(`[EXTRACTION] Extracting held garment for category: ${category || 'auto'}...`);
       const garmentInfo = await garmentExtractionService.extractGarmentInfo(
         fullUserImgPath,
         category,

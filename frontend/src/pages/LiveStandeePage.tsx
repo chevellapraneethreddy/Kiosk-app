@@ -4,7 +4,9 @@ import { Header } from '../components/Header';
 import { Button } from '../components/Button';
 import { QRCodePanel } from '../components/QRCodePanel';
 import { GarmentConflictModal } from '../components/GarmentConflictModal';
+import { ProgressScreen } from '../components/ProgressScreen';
 import { api } from '../services/api';
+import { optimizeImageFile } from '../utils/imageOptimizer';
 import { FashionGender, FashionCategory } from '../types';
 import { Camera, Wand2, Smartphone, RotateCcw, Check, RefreshCw, Sparkles, SlidersHorizontal } from 'lucide-react';
 
@@ -32,9 +34,14 @@ export const LiveStandeePage: React.FC = () => {
   const [isFlash, setIsFlash] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'CAMERA' | 'MOBILE'>('CAMERA');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [loadingStageText, setLoadingStageText] = useState<string>('Analyzing your garment...');
   const [isMirror, setIsMirror] = useState<boolean>(true);
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+
+  // Cache to avoid uploading duplicate images
+  const lastUploadedBlobRef = useRef<Blob | null>(null);
+  const lastUploadedPathRef = useRef<string | null>(null);
 
   // Conflict validation modal state
   const [conflictData, setConflictData] = useState<{
@@ -96,18 +103,38 @@ export const LiveStandeePage: React.FC = () => {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+
+    // Optimize resolution: max 1440px dimension preserves full face & garment clarity
+    // while keeping memory and upload payloads lightweight (< 350KB vs 5MB+)
+    let vw = video.videoWidth || 1280;
+    let vh = video.videoHeight || 720;
+    const maxDim = 1440;
+    if (vw > maxDim || vh > maxDim) {
+      if (vw >= vh) {
+        vh = Math.round((vh * maxDim) / vw);
+        vw = maxDim;
+      } else {
+        vw = Math.round((vw * maxDim) / vh);
+        vh = maxDim;
+      }
+    }
+
+    canvas.width = vw;
+    canvas.height = vh;
 
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
       if (isMirror) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      // Lightweight 0.88 JPEG directly from canvas
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
       setCapturedDataUrl(dataUrl);
 
       canvas.toBlob(
@@ -117,7 +144,7 @@ export const LiveStandeePage: React.FC = () => {
           }
         },
         'image/jpeg',
-        0.95
+        0.88
       );
     }
   };
@@ -129,6 +156,8 @@ export const LiveStandeePage: React.FC = () => {
     setIsConflictModalOpen(false);
     setCapturedDataUrl(null);
     setCapturedBlob(null);
+    lastUploadedBlobRef.current = null;
+    lastUploadedPathRef.current = null;
     startCamera();
   };
 
@@ -136,6 +165,7 @@ export const LiveStandeePage: React.FC = () => {
     try {
       setIsProcessing(true);
       setErrorBanner(null);
+      setLoadingStageText('Preparing your virtual try-on...');
 
       // Trigger Virtual Try-On API with strict Category & Gender
       const gen = await api.createGeneration({
@@ -158,13 +188,13 @@ export const LiveStandeePage: React.FC = () => {
           message: data.message || 'The detected garment does not match your selected category.',
         });
         setIsConflictModalOpen(true);
+        setIsProcessing(false);
         return;
       }
 
       const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
       console.error('[TRYON Frontend] Generation creation failed:', serverDetails, err.response?.data);
       setErrorBanner(serverDetails || 'Unable to start try-on generation. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -173,8 +203,11 @@ export const LiveStandeePage: React.FC = () => {
     if (!capturedBlob && !capturedDataUrl) return;
 
     try {
+      // Immediately show full-screen professional loading state
       setIsProcessing(true);
       setErrorBanner(null);
+      setLoadingStageText('Analyzing your garment...');
+
       let blobToUpload = capturedBlob;
       if (!blobToUpload && capturedDataUrl) {
         const res = await fetch(capturedDataUrl);
@@ -183,14 +216,23 @@ export const LiveStandeePage: React.FC = () => {
 
       if (!blobToUpload) throw new Error('No captured photo available');
 
-      const file = new File([blobToUpload], `standee_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      let targetPhotoPath = lastUploadedPathRef.current;
 
-      // 1. Upload captured person + held garment photo
-      const uploaded = await api.uploadImage(file);
-      setOriginalPhotoUrl(uploaded.filePath);
+      // Check if this exact blob was already uploaded in this session (avoid duplicate uploads)
+      if (!targetPhotoPath || lastUploadedBlobRef.current !== blobToUpload) {
+        setLoadingStageText('Preparing image for virtual try-on...');
+        // Optimize file size (max 1440px, 0.88 JPEG, strips unnecessary metadata)
+        const optimizedFile = await optimizeImageFile(blobToUpload, { maxDimension: 1440, quality: 0.88 });
+
+        const uploaded = await api.uploadImage(optimizedFile);
+        targetPhotoPath = uploaded.filePath;
+        lastUploadedPathRef.current = targetPhotoPath;
+        lastUploadedBlobRef.current = blobToUpload;
+        setOriginalPhotoUrl(uploaded.filePath);
+      }
 
       // 2. Trigger generation with strict category
-      await executeGeneration(uploaded.filePath, currentGender, currentCategory);
+      await executeGeneration(targetPhotoPath, currentGender, currentCategory);
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.conflict) {
         const data = err.response.data;
@@ -201,12 +243,12 @@ export const LiveStandeePage: React.FC = () => {
           message: data.message,
         });
         setIsConflictModalOpen(true);
+        setIsProcessing(false);
         return;
       }
       const serverDetails = err.response?.data?.details || err.response?.data?.error || err.message;
       console.error('[TRYON Frontend] Image upload/generation failed:', serverDetails);
       setErrorBanner(serverDetails || 'Unable to upload photo. Please try again.');
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -228,6 +270,15 @@ export const LiveStandeePage: React.FC = () => {
       executeGeneration(photoToUse, newGender, newCat);
     }
   };
+
+  if (isProcessing) {
+    return (
+      <ProgressScreen
+        stage="analyzing"
+        statusText={loadingStageText}
+      />
+    );
+  }
 
   return (
     <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-[#0B0D17] text-white select-none overflow-hidden">

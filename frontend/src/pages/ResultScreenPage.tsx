@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useKiosk } from '../context/KioskContext';
 import { ResultViewer } from '../components/ResultViewer';
 import { api } from '../services/api';
+import { preloadAndDecodeImage } from '../utils/imageOptimizer';
 
 export const ResultScreenPage: React.FC = () => {
   const { resultData, currentGeneration, startNewExperience } = useKiosk();
@@ -24,8 +25,9 @@ export const ResultScreenPage: React.FC = () => {
     if (activeToken && (!resultData || !resultData.qrDataUrl)) {
       setLoading(true);
       api.getResultByToken(activeToken)
-        .then((res) => {
+        .then(async (res) => {
           if (res?.generation?.generatedImagePath) {
+            await preloadAndDecodeImage(res.generation.generatedImagePath);
             setRemoteData({
               generatedImageUrl: res.generation.generatedImagePath,
               qrDataUrl: res.qrDataUrl || '',

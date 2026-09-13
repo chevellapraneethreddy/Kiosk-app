@@ -14,17 +14,16 @@ export async function uploadImage(req: Request, res: Response) {
 
     const originalPath = req.file.path;
     const filename = `upload_${uuidv4()}.jpg`;
-    const tempPath = path.join(os.tmpdir(), filename);
+    const uploadsDir = storageService.getStorageDir('uploads');
+    const destPath = path.join(uploadsDir, filename);
 
-    // Optimize image into temporary location outside target uploads directory
-    await processAndOptimizeImage(originalPath, tempPath, { maxWidth: 1920, quality: 85 });
+    // Optimize and write directly to uploads directory in a single pass
+    await processAndOptimizeImage(originalPath, destPath, { maxWidth: 1920, quality: 86 });
 
-    // Save optimized file into storage directory
-    const relativeUrl = await storageService.saveFile(tempPath, filename, 'uploads');
-
-    // Clean up temporary processing files safely
+    // Clean up temporary multer upload file
     if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
-    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+
+    const relativeUrl = `/uploads/${filename}`;
 
     res.json({
       originalName: req.file.originalname,

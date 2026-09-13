@@ -11,7 +11,7 @@ services:
       - key: AI_PROVIDER
         value: openai
       - key: OPENAI_IMAGE_MODEL
-        value: gpt-image-1-mini
+        value: gpt-image-2
       - key: OPENAI_API_KEY
         sync: false
       - key: JWT_SECRET

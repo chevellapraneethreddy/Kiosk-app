@@ -34,14 +34,16 @@ export async function handleTryOn(req: Request, res: Response) {
     }
 
     const category = req.body.category || 'shirt';
+    const gender = req.body.gender;
 
-    logger.info(`[TRYON Controller] Received POST /api/tryon (Category: ${category})`);
+    logger.info(`[TRYON Controller] Received POST /api/tryon (Gender: ${gender || 'AUTO'}, Category: ${category})`);
 
     const result = await openAiVtonService.processTryOn({
       generationId: `tryon_${Date.now()}`,
       userImagePath: personImgPath,
       garmentImagePath: garmentImgPath,
       category,
+      gender,
     });
 
     return res.json({
