@@ -118,6 +118,13 @@ describe('6-Category Pipeline Verification (MEN: Shirt, T-Shirt, Pant, Kurtha; W
       expect(fullLogs).toContain('TRYON_START');
       expect(fullLogs).toContain('OPENAI_CALL_COUNT=0');
       expect(fullLogs).toContain('OPENAI_CALL_COUNT=1');
+      expect(fullLogs).toContain('OPENAI_MODEL=');
+      expect(fullLogs).toContain('OPENAI_QUALITY=');
+      expect(fullLogs).toContain('OPENAI_SIZE=');
+      expect(fullLogs).toContain('PERSON_INPUT_BYTES=');
+      expect(fullLogs).toContain('GARMENT_INPUT_BYTES=');
+      expect(fullLogs).toContain('PERSON_IMAGE_DIMENSIONS=');
+      expect(fullLogs).toContain('GARMENT_IMAGE_DIMENSIONS=');
       expect(fullLogs).toContain('OPENAI_REQUEST_START=');
       expect(fullLogs).toContain('OPENAI_REQUEST_END=');
       expect(fullLogs).toContain('TRYON_COMPLETE');

@@ -21,7 +21,7 @@ const configSchema = z.object({
   AI_PROVIDER: z.enum(['openai', 'gemini', 'mock', 'custom', 'replicate', 'fashn', 'huggingface']).default('openai'),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_IMAGE_MODEL: z.string().default('gpt-image-2'),
-  OPENAI_IMAGE_QUALITY: z.enum(['low', 'medium', 'high', 'auto', 'standard']).default('high'),
+  OPENAI_IMAGE_QUALITY: z.enum(['low', 'medium', 'high', 'auto', 'standard', 'xhigh', 'max']).default('medium'),
   MOCK_GENERATION_SECONDS: z.string().default('5').transform(val => parseInt(val, 10)),
   HF_TOKEN: z.string().optional(),
   HF_SPACE: z.string().default('fashn-ai/fashn-vton-1.5'),

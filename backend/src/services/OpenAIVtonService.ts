@@ -207,7 +207,7 @@ export class OpenAIVtonService {
   constructor() {
     this.apiKey = config.OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
     this.model = config.OPENAI_IMAGE_MODEL || process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2';
-    this.quality = config.OPENAI_IMAGE_QUALITY || process.env.OPENAI_IMAGE_QUALITY || 'high';
+    this.quality = config.OPENAI_IMAGE_QUALITY || process.env.OPENAI_IMAGE_QUALITY || 'medium';
 
     const configured = !!this.apiKey;
     logger.info(`[OPENAI] Service initialized. Configured: ${configured}, Model: ${this.model}, Quality: ${this.quality}`);
@@ -361,6 +361,14 @@ export class OpenAIVtonService {
       const padBottom = targetH - pHeight - topPad;
 
       // Section 6: Image Input Optimization
+      // Token-optimized dimensions: reduces input tokens by ~44% while strictly preserving face/fabric details
+      // Full-body person input: 768x1152 (2:3 portrait aspect ratio, crystal clear facial features & body proportions)
+      // Upper-body person input: 768x768 (1:1 square)
+      // Garment reference: max 768x768 inside box (preserves embroidery, prints, zari borders, texture)
+      const inputPersonW = 768;
+      const inputPersonH = isFullBodyGarment ? 1152 : 768;
+      const inputGarmentMax = 768;
+
       // Prepare person and garment images in parallel to minimize CPU latency
       const [preparedPersonBuffer, garmentBuffer] = await Promise.all([
         sharp(cropped)
@@ -371,18 +379,23 @@ export class OpenAIVtonService {
             right: Math.max(0, padRight),
             background: wallColor,
           })
-          .resize(finalW, finalH, { fit: 'fill' })
-          .jpeg({ quality: 86, mozjpeg: true })
+          .resize(inputPersonW, inputPersonH, { fit: 'fill' })
+          .jpeg({ quality: 88, mozjpeg: true })
           .toBuffer(),
         sharp(finalGarmentPath)
-          .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 86, mozjpeg: true })
+          .resize(inputGarmentMax, inputGarmentMax, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 88, mozjpeg: true })
           .toBuffer(),
       ]);
 
-      const garmentMeta = await sharp(garmentBuffer).metadata();
-      const gWidth = garmentMeta.width || 1024;
-      const gHeight = garmentMeta.height || 1024;
+      const [personMetaOut, garmentMetaOut] = await Promise.all([
+        sharp(preparedPersonBuffer).metadata(),
+        sharp(garmentBuffer).metadata(),
+      ]);
+      const pInputW = personMetaOut.width || inputPersonW;
+      const pInputH = personMetaOut.height || inputPersonH;
+      const gInputW = garmentMetaOut.width || inputGarmentMax;
+      const gInputH = garmentMetaOut.height || inputGarmentMax;
 
       // Convert buffers to OpenAI uploadable files in parallel
       const [personFile, garmentFile] = await Promise.all([
@@ -390,14 +403,21 @@ export class OpenAIVtonService {
         toFile(garmentBuffer, 'garment.jpg', { type: 'image/jpeg' }),
       ]);
 
-      // Section 8 Mandatory Logging: Immediately before the OpenAI request
+      // Section 8 Mandatory Logging: Exactly formatted per audit requirements
       const requestStartTime = new Date().toISOString();
       logger.info(`OPENAI_CALL_COUNT=1`);
       logger.info(`OPENAI_MODEL=${this.model}`);
+      logger.info(`OPENAI_QUALITY=${this.quality}`);
+      logger.info(`OPENAI_SIZE=${targetSize}`);
+      logger.info(`PERSON_INPUT_BYTES=${preparedPersonBuffer.length}`);
+      logger.info(`GARMENT_INPUT_BYTES=${garmentBuffer.length}`);
+      logger.info(`PERSON_IMAGE_DIMENSIONS=${pInputW}x${pInputH}`);
+      logger.info(`GARMENT_IMAGE_DIMENSIONS=${gInputW}x${gInputH}`);
+      // Legacy logs for backward compatibility with existing tests
       logger.info(`IMAGE_QUALITY=${this.quality}`);
       logger.info(`IMAGE_SIZE=${targetSize}`);
-      logger.info(`INPUT_PERSON_SIZE=${preparedPersonBuffer.length} bytes (${finalW}x${finalH})`);
-      logger.info(`INPUT_GARMENT_SIZE=${garmentBuffer.length} bytes (${gWidth}x${gHeight})`);
+      logger.info(`INPUT_PERSON_SIZE=${preparedPersonBuffer.length} bytes (${pInputW}x${pInputH})`);
+      logger.info(`INPUT_GARMENT_SIZE=${garmentBuffer.length} bytes (${gInputW}x${gInputH})`);
       logger.info(`OPENAI_REQUEST_START=${requestStartTime}`);
 
       if (input.onProgress) input.onProgress(50, `Transforming outfit with OpenAI (${this.model})...`);
@@ -417,6 +437,12 @@ export class OpenAIVtonService {
       // Section 8 Mandatory Logging: After receiving result
       logger.info(`OPENAI_REQUEST_END=${requestEndTime}`);
       logger.info(`OPENAI_CALL_COUNT=1`);
+      if ((response as any).usage) {
+        const usage = (response as any).usage;
+        logger.info(`OPENAI_USAGE_INPUT_TOKENS=${usage.input_tokens || 0}`);
+        logger.info(`OPENAI_USAGE_OUTPUT_TOKENS=${usage.output_tokens || 0}`);
+        logger.info(`OPENAI_USAGE_TOTAL_TOKENS=${usage.total_tokens || 0}`);
+      }
       logger.info(`TRYON_COMPLETE`);
 
       if (input.onProgress) input.onProgress(85, 'Processing transformed fashion photo...');
