@@ -35,11 +35,12 @@ const AppContent: React.FC = () => {
   const { step } = useKiosk();
   const location = useLocation();
   const isResult = step === 'RESULT' || location.pathname.startsWith('/result/');
+  const isWelcome = (step === 'WELCOME' && (location.pathname === '/' || location.pathname === '/kiosk'));
 
   return (
     <div
       className={`min-h-screen flex flex-col justify-between ${
-        isResult ? 'h-screen overflow-hidden' : 'bg-[#0A0D14] text-white'
+        isResult ? 'h-screen overflow-hidden' : 'bg-[#07090E] text-white'
       }`}
     >
       <Routes>
@@ -58,7 +59,7 @@ const AppContent: React.FC = () => {
         <Route path="/admin" element={<AdminDashboardPage />} />
       </Routes>
 
-      {!isResult && <Footer />}
+      {!isResult && !isWelcome && <Footer />}
     </div>
   );
 };
