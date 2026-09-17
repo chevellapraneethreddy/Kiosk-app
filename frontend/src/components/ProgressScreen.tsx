@@ -36,13 +36,13 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ progress = 0, st
   }, [progress, stage]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#07080E] flex flex-col items-center justify-between p-6 sm:p-10 select-none overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#060810] via-[#0B101D] to-[#07080E] flex flex-col items-center justify-between p-6 sm:p-10 select-none overflow-hidden">
       {/* Background ambient lighting effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-amber-500/15 to-purple-600/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow" />
-      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#D4AF37]/15 to-[#B89648]/10 rounded-full blur-3xl pointer-events-none animate-pulse-slow" />
+      <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Badge */}
-      <div className="relative z-10 flex items-center space-x-2 bg-[#12131C]/80 backdrop-blur-md px-5 py-2 rounded-full border border-gold-500/30 shadow-xl">
+      <div className="relative z-10 flex items-center space-x-2 bg-[#0E121E]/85 backdrop-blur-md px-5 py-2 rounded-full border border-gold-500/30 shadow-xl">
         <Sparkles className="w-4 h-4 text-amber-400 animate-spin-slow" />
         <span className="font-sans text-xs sm:text-sm font-bold tracking-widest text-amber-300 uppercase">
           AI DIGITAL FASHION MIRROR
@@ -53,7 +53,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({ progress = 0, st
       {/* Center Main Stage Content */}
       <div className="relative z-10 flex flex-col items-center max-w-lg w-full text-center my-auto">
         {/* Animated Mirror Shimmer Portal */}
-        <div className="relative w-40 h-52 sm:w-48 sm:h-64 rounded-3xl border-2 border-gold-500/40 bg-gradient-to-b from-[#161726]/90 to-[#0A0B12]/90 backdrop-blur-xl shadow-2xl p-4 flex flex-col items-center justify-center mb-8 overflow-hidden">
+        <div className="relative w-40 h-52 sm:w-48 sm:h-64 rounded-3xl border-2 border-gold-500/40 bg-gradient-to-b from-[#101424]/90 to-[#080A12]/90 backdrop-blur-xl shadow-2xl p-4 flex flex-col items-center justify-center mb-8 overflow-hidden">
           {/* Shimmer sweep animation */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]" />
 

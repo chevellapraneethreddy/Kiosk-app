@@ -26,7 +26,7 @@ export const AdminLoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B0D17] via-[#161B33] to-[#2A1B4E] text-white flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#080B12] via-[#0C101C] to-[#07080E] text-white flex items-center justify-center p-6">
       <div className="w-full max-w-md glass-panel p-8 rounded-3xl border border-gold-500/40 shadow-2xl">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-gold-500/20 border border-gold-400 flex items-center justify-center mb-4">

@@ -82,7 +82,7 @@ export const GenerationScreenPage: React.FC = () => {
 
   if (errorMsg) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0B0D17] flex flex-col items-center justify-center p-8 text-center select-none">
+      <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#080B12] via-[#0C101C] to-[#07090F] flex flex-col items-center justify-center p-8 text-center select-none">
         <div className="glass-panel p-10 rounded-3xl max-w-xl w-full border-2 border-red-500/40 shadow-2xl flex flex-col items-center">
           <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/50 mb-6">
             <AlertCircle className="w-10 h-10 text-red-400" />

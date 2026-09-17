@@ -286,7 +286,7 @@ export const LiveStandeePage: React.FC = () => {
   }
 
   return (
-    <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-[#0B0D17] text-white select-none overflow-hidden">
+    <div className="relative w-full h-full min-h-screen flex flex-col justify-between bg-gradient-to-b from-[#080A10] via-[#0D101A] to-[#07090D] text-white select-none overflow-hidden">
       <Header title="Interactive AI Virtual Try-On Standee" />
 
       {/* Main Kiosk Vertical Display */}

@@ -76,7 +76,7 @@ export const MobileResultPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B0D17] via-[#161B33] to-[#2A1B4E] text-white p-4 flex flex-col justify-between items-center text-center select-none">
+    <div className="min-h-screen bg-gradient-to-b from-[#080B14] via-[#0C1222] to-[#07090F] text-white p-4 flex flex-col justify-between items-center text-center select-none">
       {/* Mobile Header */}
       <header className="w-full py-3 flex flex-col items-center">
         <div className="w-10 h-10 rounded-full bg-gold-500/20 border border-gold-400 flex items-center justify-center mb-1">

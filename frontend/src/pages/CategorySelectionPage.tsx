@@ -112,10 +112,10 @@ export const CategorySelectionPage: React.FC = () => {
   const currentGarments = activeGender === 'MEN' ? MEN_GARMENTS : WOMEN_GARMENTS;
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col justify-between bg-gradient-to-b from-[#0B0D17] via-[#14192E] to-[#201538] text-white select-none overflow-x-hidden p-6 md:p-10">
+    <div className="relative min-h-screen w-full flex flex-col justify-between bg-gradient-to-b from-[#080B12] via-[#0D1424] to-[#0A0D16] text-white select-none overflow-x-hidden p-6 md:p-10">
       {/* Background Ambient Glows */}
-      <div className="absolute top-10 -left-32 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 -right-32 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-10 -left-32 w-96 h-96 bg-[#D4AF37]/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 -right-32 w-96 h-96 bg-[#16203A]/40 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Bar with Back Button and Brand */}
       <header className="relative z-30 w-full max-w-7xl mx-auto flex items-center justify-between pb-4 border-b border-gold-500/20">
@@ -152,7 +152,7 @@ export const CategorySelectionPage: React.FC = () => {
             onClick={() => handleGenderSwitch('WOMEN')}
             className={`relative p-6 md:p-8 rounded-3xl transition-all duration-300 flex flex-col items-center justify-center border-2 text-center group cursor-pointer ${
               activeGender === 'WOMEN'
-                ? 'bg-gradient-to-b from-rose-950/70 via-purple-950/50 to-black/60 border-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.3)] scale-[1.03]'
+                ? 'bg-gradient-to-b from-[#1C1217] via-[#140D13] to-[#0D0B10] border-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.3)] scale-[1.03]'
                 : 'glass-panel border-white/10 hover:border-gold-500/40 opacity-70 hover:opacity-100 hover:scale-[1.01]'
             }`}
           >
@@ -177,7 +177,7 @@ export const CategorySelectionPage: React.FC = () => {
             onClick={() => handleGenderSwitch('MEN')}
             className={`relative p-6 md:p-8 rounded-3xl transition-all duration-300 flex flex-col items-center justify-center border-2 text-center group cursor-pointer ${
               activeGender === 'MEN'
-                ? 'bg-gradient-to-b from-blue-950/70 via-indigo-950/50 to-black/60 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.3)] scale-[1.03]'
+                ? 'bg-gradient-to-b from-[#0D1627] via-[#0A1020] to-[#070A12] border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.3)] scale-[1.03]'
                 : 'glass-panel border-white/10 hover:border-gold-500/40 opacity-70 hover:opacity-100 hover:scale-[1.01]'
             }`}
           >

@@ -39,7 +39,7 @@ export const MobileUploadPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B0D17] via-[#161B33] to-[#2A1B4E] text-white p-6 flex flex-col justify-between items-center text-center">
+    <div className="min-h-screen bg-gradient-to-b from-[#0A0D16] via-[#0E1322] to-[#080A10] text-white p-6 flex flex-col justify-between items-center text-center">
       {/* Mobile Branding Header */}
       <header className="w-full py-4 flex flex-col items-center">
         <div className="w-12 h-12 rounded-full bg-gold-500/20 border border-gold-400 flex items-center justify-center mb-2">

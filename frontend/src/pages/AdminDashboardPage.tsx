@@ -111,7 +111,7 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B0D17] via-[#161B33] to-[#2A1B4E] text-white p-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#070A12] via-[#0A101E] to-[#06080E] text-white p-8">
       {/* Header */}
       <header className="flex items-center justify-between pb-6 border-b border-gold-500/20 mb-8">
         <div className="flex items-center space-x-3">

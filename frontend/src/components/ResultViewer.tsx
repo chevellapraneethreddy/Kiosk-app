@@ -50,7 +50,7 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-screen overflow-hidden bg-[#07080b] flex items-center justify-center select-none">
+    <div className="relative w-full h-full min-h-screen overflow-hidden bg-gradient-to-b from-[#06070B] via-[#090C14] to-[#06070B] flex items-center justify-center select-none">
       {/* Ambient glowing background for rich atmosphere */}
       <img
         src={generatedImageUrl}
@@ -72,7 +72,7 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({
       </div>
 
       {/* Top-Left Small Badge */}
-      <div className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center space-x-2 bg-[#121318]/85 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-white text-[11px] md:text-xs font-bold tracking-wider uppercase shadow-xl pointer-events-auto">
+      <div className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center space-x-2 bg-[#0A0D15]/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-[#D4AF37]/30 text-white text-[11px] md:text-xs font-bold tracking-wider uppercase shadow-xl pointer-events-auto">
         <span className="text-amber-400">✨</span>
         <span className="tracking-widest">AI DIGITAL FASHION MIRROR</span>
       </div>
@@ -81,14 +81,14 @@ export const ResultViewer: React.FC<ResultViewerProps> = ({
       {isCollapsed ? (
         <button
           onClick={() => setIsCollapsed(false)}
-          className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-30 bg-[#121318]/90 hover:bg-[#20222a] backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/20 shadow-2xl flex items-center space-x-2.5 text-amber-400 active:scale-95 transition-all pointer-events-auto"
+          className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-30 bg-[#0A0D15]/92 hover:bg-[#141824] backdrop-blur-xl px-4 py-3 rounded-2xl border border-[#D4AF37]/40 shadow-2xl flex items-center space-x-2.5 text-amber-400 active:scale-95 transition-all pointer-events-auto"
         >
           <QrCode className="w-5 h-5 text-[#dfb858]" />
           <span className="text-xs font-bold text-white uppercase tracking-wider">SHOW QR CODE</span>
           <Eye className="w-4 h-4 text-gray-300 ml-1" />
         </button>
       ) : (
-        <aside className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-30 w-[290px] sm:w-[310px] max-w-[calc(100vw-2rem)] bg-[#121318]/92 backdrop-blur-2xl px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border border-white/20 shadow-2xl flex flex-col items-center text-center space-y-2.5 transition-all duration-300 pointer-events-auto">
+        <aside className="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-30 w-[290px] sm:w-[310px] max-w-[calc(100vw-2rem)] bg-[#0A0D15]/94 backdrop-blur-2xl px-4 py-3.5 sm:px-5 sm:py-4 rounded-2xl border border-[#D4AF37]/35 shadow-2xl flex flex-col items-center text-center space-y-2.5 transition-all duration-300 pointer-events-auto">
           {/* Header & Minimize Toggle */}
           <div className="w-full flex items-start justify-between relative">
             <div className="flex-1 space-y-0.5 text-center">
