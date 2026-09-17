@@ -35,9 +35,18 @@ const AppContent: React.FC = () => {
   const { step } = useKiosk();
   const location = useLocation();
   const isResult = step === 'RESULT' || location.pathname.startsWith('/result/');
+  const isWelcome = step === 'WELCOME' && (location.pathname === '/' || location.pathname === '/kiosk');
 
   return (
-    <div className={`min-h-screen flex flex-col justify-between ${isResult ? 'h-screen overflow-hidden' : 'bg-[#0B0D17] text-white'}`}>
+    <div
+      className={`min-h-screen flex flex-col justify-between ${
+        isResult
+          ? 'h-screen overflow-hidden'
+          : isWelcome
+          ? 'bg-[#FAF9F6] text-[#111317]'
+          : 'bg-[#0B0D17] text-white'
+      }`}
+    >
       <Routes>
         {/* Main Kiosk Flow Routes */}
         <Route path="/" element={<KioskMainView />} />
