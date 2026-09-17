@@ -4,9 +4,18 @@
 
 @layer base {
   body {
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
   }
 }
 

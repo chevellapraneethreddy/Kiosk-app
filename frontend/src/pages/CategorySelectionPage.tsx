@@ -9,7 +9,7 @@ interface GarmentOption {
   name: string;
   subtitle: string;
   badge: string;
-  icon: string;
+  iconUrl: string;
   description: string;
   gradient: string;
 }
@@ -20,36 +20,36 @@ const MEN_GARMENTS: GarmentOption[] = [
     name: 'Shirt',
     subtitle: 'Button-Up & Collared',
     badge: 'Upper Body',
-    icon: '👔',
+    iconUrl: '/icons/shirt.png',
     description: 'Crisp collar, buttons, full sleeves down to cuffs, tailored torso fit.',
-    gradient: 'from-blue-600/20 via-indigo-600/10 to-transparent',
+    gradient: 'from-blue-600/25 via-indigo-600/15 to-transparent',
   },
   {
     id: 'T-Shirt',
     name: 'T-Shirt',
     subtitle: 'Crewneck & Casual Tee',
     badge: 'Upper Body',
-    icon: '👕',
+    iconUrl: '/icons/tshirt.png',
     description: 'Comfortable crewneck, relaxed fit, uniform reference fabric drape.',
-    gradient: 'from-cyan-600/20 via-teal-600/10 to-transparent',
+    gradient: 'from-emerald-600/25 via-teal-600/15 to-transparent',
   },
   {
     id: 'Pant',
     name: 'Pant',
     subtitle: 'Trousers, Chinos & Jeans',
     badge: 'Lower Body',
-    icon: '👖',
+    iconUrl: '/icons/pant.png',
     description: 'Tailored waistline, fly, pockets, and straight leg drape down to shoes.',
-    gradient: 'from-amber-600/20 via-orange-600/10 to-transparent',
+    gradient: 'from-sky-600/25 via-blue-600/15 to-transparent',
   },
   {
     id: 'Kurtha',
     name: 'Kurtha',
-    subtitle: 'Traditional Men\'s Kurta',
+    subtitle: "Traditional Men's Kurta",
     badge: 'Ethnic Wear',
-    icon: '✨',
+    iconUrl: '/icons/kurtha.png',
     description: 'Classic long tunic, mandarin collar, festive ethnic wear past knees.',
-    gradient: 'from-yellow-600/20 via-amber-600/10 to-transparent',
+    gradient: 'from-amber-600/25 via-yellow-600/15 to-transparent',
   },
 ];
 
@@ -59,18 +59,18 @@ const WOMEN_GARMENTS: GarmentOption[] = [
     name: 'Saree',
     subtitle: 'Silk, Banarasi & Designer',
     badge: 'Traditional Saree Drape',
-    icon: '🥻',
+    iconUrl: '/icons/saree.png',
     description: 'Authentic diagonal pallu, matching blouse, waist pleats & floor-length drape.',
-    gradient: 'from-rose-600/25 via-pink-600/15 to-transparent',
+    gradient: 'from-rose-600/30 via-pink-600/15 to-transparent',
   },
   {
     id: 'Dress',
     name: 'Dress',
     subtitle: 'Gown, Frock & Kurti',
     badge: 'Full-Length Outfit',
-    icon: '👗',
+    iconUrl: '/icons/dress.png',
     description: 'Graceful feminine silhouette, tailored bustline and flowy elegant hem.',
-    gradient: 'from-purple-600/25 via-fuchsia-600/15 to-transparent',
+    gradient: 'from-purple-600/30 via-fuchsia-600/15 to-transparent',
   },
 ];
 
@@ -233,13 +233,18 @@ export const CategorySelectionPage: React.FC = () => {
                 >
                   {/* Top Row: Icon + Badge */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center text-3xl md:text-4xl group-hover:scale-110 transition-transform shadow-lg">
-                      {garment.icon}
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-black/60 border border-gold-400/20 p-2 flex items-center justify-center group-hover:scale-105 group-hover:border-gold-400/50 transition-all duration-300 shadow-xl shadow-black/50 overflow-hidden">
+                      <img
+                        src={garment.iconUrl}
+                        alt={garment.name}
+                        className="w-full h-full object-contain rounded-xl drop-shadow-md"
+                        loading="eager"
+                      />
                     </div>
                     <span
-                      className={`text-[11px] font-bold uppercase px-3 py-1 rounded-full border ${
+                      className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
                         isSelected
-                          ? 'bg-gold-500 text-black border-gold-400 font-extrabold shadow-md'
+                          ? 'bg-gold-500 text-black border-gold-400 font-black shadow-md'
                           : 'bg-white/5 text-gray-300 border-white/10'
                       }`}
                     >
@@ -249,13 +254,13 @@ export const CategorySelectionPage: React.FC = () => {
 
                   {/* Center Info */}
                   <div className="space-y-1.5 my-2">
-                    <h3 className="font-serif text-2xl md:text-3xl font-black text-white group-hover:text-gold-300 transition-colors">
+                    <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-white group-hover:text-gold-300 transition-colors">
                       {garment.name}
                     </h3>
-                    <p className="text-xs md:text-sm font-semibold text-gold-400/90 tracking-wide">
+                    <p className="text-xs md:text-sm font-semibold text-gold-400/90 tracking-wide uppercase">
                       {garment.subtitle}
                     </p>
-                    <p className="text-xs text-gray-300 leading-relaxed pt-1">
+                    <p className="text-xs text-gray-300/90 font-normal leading-relaxed pt-1">
                       {garment.description}
                     </p>
                   </div>

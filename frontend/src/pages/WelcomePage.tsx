@@ -45,11 +45,11 @@ export const WelcomePage: React.FC = () => {
           <Sparkles className="w-12 h-12 text-gold-400" />
         </div>
 
-        <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-black tracking-wider gold-gradient-text uppercase mb-4 leading-tight">
+        <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-black tracking-tight gold-gradient-text uppercase mb-5 leading-tight drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]">
           REAL VIRTUAL TRY-ON
         </h1>
 
-        <p className="text-xl md:text-2xl font-medium text-gray-200 tracking-wide mb-12 max-w-2xl">
+        <p className="text-lg md:text-2xl font-normal text-gray-200/90 tracking-wide mb-12 max-w-2xl leading-relaxed">
           Hold your saree, dress, shirt, t-shirt, kurtha or pants in front of the camera and see yourself wearing it in real-time AI output!
         </p>
 

@@ -20,8 +20,9 @@ export default {
         }
       },
       fontFamily: {
-        serif: ['Cinzel', 'Playfair Display', 'serif'],
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        serif: ['"Playfair Display"', 'Cinzel', 'Georgia', 'serif'],
+        display: ['"Playfair Display"', 'serif'],
+        sans: ['"Outfit"', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
