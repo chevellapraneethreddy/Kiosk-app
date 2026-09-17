@@ -54,10 +54,15 @@ export const LiveStandeePage: React.FC = () => {
 
   useEffect(() => {
     startCamera();
+    if (!sessionData) {
+      initializeSession().catch((err) => {
+        console.warn('[LiveStandee] Session initialization in background:', err?.message || err);
+      });
+    }
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [sessionData, initializeSession]);
 
   const startCamera = async () => {
     try {

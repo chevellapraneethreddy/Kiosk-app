@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Experience, Style, Generation, SessionResponse, ResultResponse, FashionGender, FashionCategory } from '../types';
 import { api, envApiUrl, resolveMediaUrl } from '../services/api';
 
@@ -53,7 +53,10 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const sessionPromiseRef = useRef<Promise<SessionResponse> | null>(null);
+
   const startNewExperience = () => {
+    sessionPromiseRef.current = null;
     setStep('WELCOME');
     setSelectedExperience(null);
     setSelectedGender(null);
@@ -66,12 +69,19 @@ export const KioskProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const initializeSession = async () => {
+    if (sessionData) return;
+    if (sessionPromiseRef.current) {
+      await sessionPromiseRef.current;
+      return;
+    }
     try {
       setIsLoading(true);
-      const res = await api.createSession();
+      sessionPromiseRef.current = api.createSession();
+      const res = await sessionPromiseRef.current;
       setSessionData(res);
     } catch (err: any) {
       console.error('Failed to initialize kiosk session:', err);
+      sessionPromiseRef.current = null;
     } finally {
       setIsLoading(false);
     }

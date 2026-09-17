@@ -1,16 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useKiosk } from '../context/KioskContext';
 import { Sparkles, HelpCircle, Globe, Play } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 
 export const WelcomePage: React.FC = () => {
-  const { setStep, initializeSession } = useKiosk();
+  const { setStep, initializeSession, sessionData } = useKiosk();
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
 
-  const handleStart = async () => {
-    await initializeSession();
+  // Pre-warm session creation immediately when Welcome screen mounts
+  useEffect(() => {
+    if (!sessionData) {
+      initializeSession().catch((err) => {
+        console.warn('[WelcomePage] Session pre-warming in background:', err?.message || err);
+      });
+    }
+  }, [sessionData, initializeSession]);
+
+  const handleStart = () => {
+    // Instantaneous screen transition on clicking "START VIRTUAL TRY-ON"
     setStep('CATEGORY_SELECT');
+    if (!sessionData) {
+      initializeSession().catch((err) => {
+        console.warn('[WelcomePage] Background session initialization:', err?.message || err);
+      });
+    }
   };
 
   return (
