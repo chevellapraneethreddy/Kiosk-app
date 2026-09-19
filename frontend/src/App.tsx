@@ -36,7 +36,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
   const isResult = step === 'RESULT' || location.pathname.startsWith('/result/');
   const isWelcome = step === 'WELCOME' && (location.pathname === '/' || location.pathname === '/kiosk');
-  const isLightScreen = isWelcome || step === 'CATEGORY_SELECT';
+  const isLightScreen = isWelcome || step === 'CATEGORY_SELECT' || step === 'LIVE_STANDEE';
 
   return (
     <div
